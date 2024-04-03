@@ -1,8 +1,14 @@
 #pragma once
 #include <gtk/gtk.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 // Déclarations des fonctions
 gboolean validate_login(const gchar *username, const gchar *password);

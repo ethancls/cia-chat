@@ -12,32 +12,42 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
-gboolean validate_login(const gchar *username, const gchar *password)
-{
+void hash_password(const char* password, char* hashed_password_hex) {
+    unsigned char hashed_password[SHA256_DIGEST_LENGTH];
+    SHA256((const unsigned char*)password, strlen(password), hashed_password);
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(hashed_password_hex + (i * 2), "%02x", hashed_password[i]);
+    }
+    hashed_password_hex[SHA256_DIGEST_LENGTH * 2] = '\0';
+}
+
+
+gboolean validate_login(const gchar *username, const gchar *password) {
     gboolean valid = FALSE;
     gchar line[256];
     gchar *file_username;
-    gchar *file_password;
+    gchar *file_password_hash;
     gchar *saveptr; // Pour strtok_r
+    gchar hashed_password_hex[SHA256_DIGEST_LENGTH * 2 + 1];
+
+    // Hacher le mot de passe fourni
+    hash_password(password, hashed_password_hex);
 
     FILE *file = fopen("./database/login.txt", "r");
-    if (file == NULL)
-    {
+    if (file == NULL) {
         return FALSE;
     }
 
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
+    while (fgets(line, sizeof(line), file) != NULL) {
         // Supprime le saut de ligne à la fin si présent
         line[strcspn(line, "\r\n")] = 0;
 
         file_username = strtok_r(line, ";", &saveptr);
-        file_password = strtok_r(NULL, ";", &saveptr);
+        file_password_hash = strtok_r(NULL, ";", &saveptr);
 
-        if (file_username && file_password &&
+        if (file_username && file_password_hash &&
             strcmp(username, file_username) == 0 &&
-            strcmp(password, file_password) == 0)
-        {
+            strcmp(hashed_password_hex, file_password_hash) == 0) {
             valid = TRUE;
             break;
         }
@@ -103,7 +113,7 @@ void open_chat_window()
 {
     // Crée un provider CSS
     GtkCssProvider *provider = gtk_css_provider_new();
-    gtk_css_provider_load_from_path(provider, "./data/css/signin.css", NULL);
+    gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
 
     // Création de la fenêtre de chat
     chat_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -159,28 +169,14 @@ void open_chat_window()
     gtk_box_pack_start(GTK_BOX(chat_area), hbox2, FALSE, TRUE, 0);
 
     // Création du bouton pour quitter
-    GtkWidget *logout_button = gtk_button_new();
-    GdkPixbuf *resized_logout = get_pixbuf_from_file_resized("./exit-light.png", 24, 24); // Redimensionne l'image
-    if (resized_logout)
-    {
-        GtkWidget *logout_icon = gtk_image_new_from_pixbuf(resized_logout);
-        gtk_button_set_image(GTK_BUTTON(logout_button), logout_icon);
-        g_object_unref(resized_logout); // Libère la mémoire du GdkPixbuf redimensionné
-    }
-    gtk_button_set_always_show_image(GTK_BUTTON(logout_button), TRUE);
+    GtkWidget *logout_button = gtk_button_new_with_label("Exit");
+    gtk_button_set_always_show_image(GTK_BUTTON(logout_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(logout_button, "clicked", G_CALLBACK(logout), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), logout_button, FALSE, FALSE, 0);
 
-    // Création du bouton d'envoi de fichier avec une icône
-    GtkWidget *file_button = gtk_button_new();
-    GdkPixbuf *resized_pixbuf = get_pixbuf_from_file_resized("./attach-hover-dark.png", 24, 24); // Redimensionne l'image
-    if (resized_pixbuf)
-    {
-        GtkWidget *file_icon = gtk_image_new_from_pixbuf(resized_pixbuf);
-        gtk_button_set_image(GTK_BUTTON(file_button), file_icon);
-        g_object_unref(resized_pixbuf); // Libère la mémoire du GdkPixbuf redimensionné
-    }
-    gtk_button_set_always_show_image(GTK_BUTTON(file_button), TRUE);
+    // Création du bouton d'envoi de fichier
+    GtkWidget *file_button = gtk_button_new_with_label("Load File");
+    gtk_button_set_always_show_image(GTK_BUTTON(file_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(file_button, "clicked", G_CALLBACK(send_file), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), file_button, FALSE, FALSE, 0);
 
@@ -192,17 +188,21 @@ void open_chat_window()
     g_signal_connect(chat_entry, "activate", G_CALLBACK(send_message), NULL);
 
     // Bouton d'envoi
-    GtkWidget *send_button = gtk_button_new();
-    GdkPixbuf *resized_send_icon = get_pixbuf_from_file_resized("./send-hover-dark.png", 24, 24); // Redimensionne l'image
-    if (resized_send_icon)
-    {
-        GtkWidget *send_icon = gtk_image_new_from_pixbuf(resized_send_icon);
-        gtk_button_set_image(GTK_BUTTON(send_button), send_icon);
-        g_object_unref(resized_send_icon); // Libère la mémoire du GdkPixbuf redimensionné
-    }
-    gtk_button_set_always_show_image(GTK_BUTTON(send_button), TRUE);
+    GtkWidget *send_button = gtk_button_new_with_label("Send");
+    gtk_button_set_always_show_image(GTK_BUTTON(send_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(send_button, "clicked", G_CALLBACK(send_message), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), send_button, FALSE, FALSE, 0);
+
+
+    // Définir des identifiants CSS pour les widgets
+    gtk_widget_set_name(chat_window, "chat_window");
+    gtk_widget_set_name(scroll_menu, "scroll_menu");
+    gtk_widget_set_name(chat_area, "chat_area");
+    gtk_widget_set_name(chat_view, "chat_view");
+    gtk_widget_set_name(chat_entry, "chat_entry");
+    gtk_widget_set_name(send_button, "send_button");
+    gtk_widget_set_name(logout_button, "logout_button");
+    gtk_widget_set_name(file_button, "file_button");
 
     // Appliquer le CSS à la fenêtre de connexion
     apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
@@ -214,16 +214,33 @@ void open_chat_window()
     load_chat_history();
 }
 
-void write_login_to_file(const char *username, const char *password)
-{
-    FILE *file = fopen("./database/login.txt", "a"); // Ouvre le fichier en mode append
-    if (file != NULL)
-    {
-        fprintf(file, "%s;%s\n", username, password);
-        fclose(file);
+// Fonction pour convertir le hash en une chaîne hexadécimale
+void to_hex_string(unsigned char *hash, char *output, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        sprintf(output + (i * 2), "%02x", hash[i]);
     }
-    else
-    {
+    output[length * 2] = '\0';
+}
+
+void write_login_to_file(const char *username, const char *password) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    char hex_string[SHA256_DIGEST_LENGTH * 2 + 1];
+
+    // Hachage du mot de passe
+    if (!SHA256((const unsigned char*)password, strlen(password), hash)) {
+        g_print("Erreur lors du hachage du mot de passe.\n");
+        return;
+    }
+
+    // Convertir le hash en chaîne hexadécimale
+    to_hex_string(hash, hex_string, sizeof(hash));
+
+    // Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
+    FILE *file = fopen("./database/login.txt", "a"); // Ouvre le fichier en mode append
+    if (file != NULL) {
+        fprintf(file, "%s;%s\n", username, hex_string);
+        fclose(file);
+    } else {
         g_print("Erreur lors de l'ouverture du fichier.\n");
     }
 }
@@ -286,8 +303,8 @@ void submit_signin(GtkWidget *widget, gpointer data)
     open_login_window();
 }
 
-
-void exit_signin(GtkWidget *widget, gpointer data){
+void exit_signin(GtkWidget *widget, gpointer data)
+{
     gtk_widget_hide(signin_window);
     open_login_window();
 }
@@ -333,7 +350,7 @@ void signin(GtkWidget *widget, gpointer data)
     gtk_widget_set_name(signin_lastname_entry, "lastname_entry");
     gtk_entry_set_placeholder_text(GTK_ENTRY(signin_lastname_entry), "Last Name");
     gtk_box_pack_start(GTK_BOX(vbox), signin_lastname_entry, FALSE, FALSE, 0);
-    
+
     signin_username_entry = gtk_entry_new();
     gtk_widget_set_name(signin_username_entry, "username_entry");
     gtk_entry_set_placeholder_text(GTK_ENTRY(signin_username_entry), "Username");
@@ -425,19 +442,19 @@ void open_login_window()
     gtk_widget_set_name(hbox_buttons, "button_box");
     gtk_box_pack_start(GTK_BOX(vbox), hbox_buttons, FALSE, FALSE, 0);
 
-    // Ajoute le bouton de connexion
-    login_button = gtk_button_new_with_label("Login");
-    gtk_widget_set_name(login_button, "login_button");
-    g_signal_connect(login_button, "clicked", G_CALLBACK(login), NULL);
-    gtk_widget_set_hexpand(login_button, TRUE); // Pour étendre la largeur
-    gtk_box_pack_start(GTK_BOX(hbox_buttons), login_button, TRUE, TRUE, 0);
-
     // Création du bouton Signin
     GtkWidget *signin_button = gtk_button_new_with_label("Sign In");
     gtk_widget_set_name(signin_button, "signin_button");
     g_signal_connect(signin_button, "clicked", G_CALLBACK(signin), NULL);
     gtk_widget_set_hexpand(signin_button, TRUE); // Pour étendre la largeur
     gtk_box_pack_start(GTK_BOX(hbox_buttons), signin_button, TRUE, TRUE, 0);
+
+    // Ajoute le bouton de connexion
+    login_button = gtk_button_new_with_label("Login");
+    gtk_widget_set_name(login_button, "login_button");
+    g_signal_connect(login_button, "clicked", G_CALLBACK(login), NULL);
+    gtk_widget_set_hexpand(login_button, TRUE); // Pour étendre la largeur
+    gtk_box_pack_start(GTK_BOX(hbox_buttons), login_button, TRUE, TRUE, 0);
 
     // Création de l'étiquette pour afficher le message d'erreur
     error_label = gtk_label_new("");

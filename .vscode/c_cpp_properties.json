@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/**",
+                "/opt/homebrew/include/gtk-3.0",
+                "/opt/homebrew/include/glib-2.0",
+                "/opt/homebrew/lib/glib-2.0/include",
+                "/opt/homebrew/include/pango-1.0",
+                "/opt/homebrew/include/harfbuzz",
+                "/opt/homebrew/include/cairo",
+                "/opt/homebrew/include/gdk-pixbuf-2.0",
+                "/opt/homebrew/include/atk-1.0",
+                "/opt/homebrew/opt/openssl@1.1",
+                "/opt/homebrew/Cellar/openssl@3/3.2.1/include",
+                "/opt/homebrew/opt/openssl@3/include/openssl/"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}

@@ -12,31 +12,7 @@
     box-shadow: 0 0 5px 3px #242b42;
 }
 
-#firstname_entry {
-    background-color: #000000;
-    color: #ffffff;
-    border: 1px solid #0055ff;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-#lastname_entry {
-    background-color: #000000;
-    color: #ffffff;
-    border: 1px solid #0055ff;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-#username_entry {
-    background-color: #000000;
-    color: #ffffff;
-    border: 1px solid #0055ff;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-#password_entry {
+#firstname_entry, #lastname_entry, #username_entry, #password_entry {
     background-color: #000000;
     color: #ffffff;
     border: 1px solid #0055ff;

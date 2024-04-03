@@ -1,0 +1,42 @@
+#chat_window {
+    background-color: #000000;
+    background-image: url("../images/backgrounds/cia-background.jpg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center -100px;
+}
+
+#scroll_menu {
+    border-radius: 5px;
+    padding: 20px 20px 15px 20px;
+    box-shadow: 0 0 5px 3px #242b42;
+}
+
+#chat_area {
+    border-radius: 5px;
+    padding: 20px 20px 15px 20px;
+    box-shadow: 0 0 5px 3px #242b42;
+}
+
+#chat_view {
+    border-radius: 5px;
+    padding: 20px 20px 15px 20px;
+    box-shadow: 0 0 5px 3px #242b42;
+}
+
+#chat_entry {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #0055ff;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+#send_button, #logout_button, #file_button {
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+#send_button:hover, #logout_button:hover, #file_button:hover {
+    background-color: #e0e0e0;
+}
