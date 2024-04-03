@@ -1,0 +1,50 @@
+#auth_screen {
+    background-color: black;
+    background-image: url("../images/backgrounds/cia-background.jpg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center top;
+}
+
+#login_menu {
+    border-radius: 5px;
+    padding: 20px 20px 15px 20px;
+    box-shadow: 0 0 5px 3px #242b42;
+}
+
+#firstname_entry {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #0055ff;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+#lastname_entry {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #0055ff;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+
+#username_entry {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #0055ff;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+#password_entry {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #0055ff;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+#error_label {
+    color: #ff0000;
+}

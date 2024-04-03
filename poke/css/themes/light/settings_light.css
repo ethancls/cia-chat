@@ -1,0 +1,248 @@
+#settings_scr
+{
+    background-color: #d6d6d6;
+}
+#exit_button
+{
+    background-color: #f0f0f0;
+    background-image: url("../../../images/exit-light.png");
+}
+#exit_button:hover
+{
+    background-color: #adadad;
+}
+#menu_block
+{
+    background-color: #d6d6d6;
+}
+#title1
+{
+    color: #343740;
+}
+#account_block
+{
+    background-color: #f0f0f0;
+}
+#add_button
+{
+    background-color: #ebebeb;
+    background-image: url("../../../images/add_photo_light.png");
+}
+#add_button:hover
+{
+    background-color: #4d515e;
+}
+#gallery_button
+{
+    background-color: #ebebeb;
+    background-image: url("../../../images/gallery-light.png");
+}
+#gallery_button:hover
+{
+    background-color: #4d515e;
+}
+#sgallery
+{
+    background-color: rgba(0, 0, 0, 0);
+}
+#sgallery_box
+{
+    background-color: #343740;
+    box-shadow: 0 0 0 3px #777b86;
+}
+#sgallery_title
+{
+    color: #cccccc;
+}
+#nickname-s
+{
+    color: #343740;
+}
+#nickname-n
+{
+    color: #343740;
+}
+#info_box
+{
+    background-color: #ebebeb;
+}
+#settings_fields
+{
+    background-color: #d6d6d6;
+    border-color: #d6d6d6;
+    color: #343740;
+}
+#settings_fields:link
+{
+    border-color: #964444;
+}
+#settings_fields:active
+{
+    border-color: rgba(255, 186, 0, 0.6);
+}
+#apply_button {
+    color: #343740;
+    background: #d6d6d6;
+    border: .5px solid #d6d6d6;
+}
+#apply_button:hover {
+    background: #343740;
+    color: #d6d6d6;
+}
+#title2
+{
+    color: #343740;
+}
+#teams_block
+{
+    background-color: #f0f0f0;
+}
+#mystic
+{
+    background-color: #d6d6d6;
+    border: 1px solid #d6d6d6;
+}
+#mystic:hover
+{
+    border: 1px solid rgba(0, 119, 241, 0.3);
+    border: 2px solid rgba(0, 119, 241, 0.6);
+    border: 3px solid rgb(0, 119, 241);
+}
+#mystic:link
+{
+    border: 3px solid rgb(0, 119, 241);
+    opacity: 0.5;
+}
+#instinct
+{
+    background-color: #d6d6d6;
+}
+#instinct:hover
+{
+    border: 1px solid rgba(255, 186, 0, 0.3);
+    border: 2px solid rgba(255, 186, 0, 0.6);
+    border: 3px solid rgb(255, 186, 0);
+}
+#instinct:link
+{
+    border: 3px solid rgb(255, 186, 0);
+    opacity: 0.5;
+}
+#valor
+{
+    background-color: #d6d6d6;
+}
+#valor:hover
+{
+    border: 1px solid rgba(255, 13, 2, 0.3);
+    border: 2px solid rgba(255, 13, 2, 0.6);
+    border: 3px solid rgb(255, 13, 2);
+}
+#valor:link
+{
+    border: 3px solid rgb(255, 13, 2);
+    opacity: 0.5;
+}
+#appearance_block
+{
+    background-color: #f0f0f0;
+}
+#title5
+{
+    color: #343740;
+}
+#theme_label
+{
+    color: #343740;
+}
+#title3
+{
+    color: #343740;
+}
+#title4
+{
+    color: #343740;
+}
+
+#theme_bgs
+{
+    box-shadow: inset 0 0 0 2px #1f2846;
+}
+#theme_bgs:hover
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#theme_bgs:link
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+
+#chat_bg1
+{
+    background-color: #ebebeb;
+    background-size: 100%;
+    border-radius: 15px;
+    box-shadow: inset 0 0 0 2px #1f2846;
+    transition: 0.1s cubic-bezier(0.18,0.62,0.71,0.5);
+}
+#chat_bg1:hover
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg1:link
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg2
+{
+    background-image: url("../../../chat-background/preview/light/lapras.png");
+    background-size: 100%;
+    border-radius: 15px;
+    box-shadow: inset 0 0 0 2px #1f2846;
+    transition: 0.1s cubic-bezier(0.18,0.62,0.71,0.5);
+}
+#chat_bg2:hover
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg2:link
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg3
+{
+    background-image: url("../../../chat-background/preview/light/starter.png");
+    background-size: 100%;
+    border-radius: 15px;
+    box-shadow: inset 0 0 0 2px #1f2846;
+    transition: 0.1s cubic-bezier(0.18,0.62,0.71,0.5);
+}
+#chat_bg3:hover
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg3:link
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg4
+{
+    background-image: url("../../../chat-background/preview/light/magnemite.png");
+    background-size: 100%;
+    border-radius: 15px;
+    box-shadow: inset 0 0 0 2px #1f2846;
+    transition: 0.1s cubic-bezier(0.18,0.62,0.71,0.5);
+}
+#chat_bg4:hover
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+#chat_bg4:link
+{
+    box-shadow: inset 0 0 0 2px #c3c8da;
+}
+
+#about_info
+{
+    color: #343740;
+}

@@ -1,0 +1,217 @@
+#list
+{
+  background-color: #d6d6d6;
+}
+#search_field
+{
+  background-color: #ebebeb;
+  color: #343740;;
+}
+#search_block
+{
+  background-color: #ebebeb;
+}
+#adduser
+{
+  background-image: url("../../../images/add-user-light.png");
+}
+#adduser:hover
+{
+  background-image: url("../../../images/add-user-hover-light.png");
+}
+#dm_text
+{
+  color: #343740;;
+}
+#entry_block
+{
+  background-color: rgba(214, 214, 214, 0);
+}
+#entry_text
+{
+  background-color: #d6d6d6;
+  color: #343740;
+}
+#attach
+{
+  background-image: url("../../../images/attach-light.png");
+  background-color: #d6d6d6;
+}
+#attach:hover
+{
+  background-image: url("../../../images/attach-hover-light.png");
+  background-color: #343740;
+}
+#send
+{
+  background-image: url("../../../images/send-light.png");
+  background-color: #d6d6d6;
+}
+#send:hover
+{
+  background-image: url("../../../images/send-hover-light.png");
+  background-color: #343740;
+}
+#sticker
+{
+  background-image: url("../../../images/sticker-light.png");
+  background-color: #d6d6d6;
+}
+#sticker:hover
+{
+  background-image: url("../../../images/sticker-hover-light.png");
+  background-color: #343740;
+}
+#message
+{
+  color: #343740;
+  background-color: #d6d6d6;
+}
+#name_time
+{
+  color: #343740;
+}
+#nickname
+{
+  color: rgba(52, 55, 64, 0.85);
+}
+#msg_name
+{
+  color: #343740;
+}
+#single
+{
+  background-color: rgba(235, 235, 235, 0);
+}
+#single:hover
+{
+  background-color: rgba(235, 235, 235, 0.9);
+}
+#single:link
+{
+  background-color: rgb(235, 235, 235);
+}
+#single:link #nickname
+{
+  color: rgb(52, 55, 64);
+}
+#date
+{
+  color: #343740;
+}
+#stickerlist
+{
+  background-color: #d6d6d6;
+  box-shadow: inset 0 0 0 2px #d6d6d6;
+}
+#arrowdown
+{
+  background-color: #343740;
+}
+#arrowdown:hover
+{
+  background-image: url("../../../images/arrow-down-light.png");
+  background-color: #343740;
+}
+#msggroup
+{
+  background-image: url("../../../images/create-group-light.png");
+  background-size: 100%;
+  background-color: #ebebeb;
+}
+#msggroup:hover
+{
+  background-image: url("../../../images/create-group-light-hover.png");
+  background-color: #343740;
+}
+#crgroup_box
+{
+  background-color: #343740;
+  box-shadow: 0 0 0 3px #777b86;
+}
+#crgroup_search_field
+{
+  background-color: #ebebeb;
+  color: #d6d6d6;
+}
+#crgroup_search_block
+{
+  background-color: #ebebeb;
+}
+#creategroup_title
+{
+  color: #cccccc;
+}
+#crlist_person
+{
+  background-color: #e0e0e0;
+}
+#crlist_person:hover
+{
+  background-color: #ebebeb;
+}
+#group_people
+{
+  background-color: #75767a;
+  box-shadow: inset 0 0 0 1.5px #67686b;
+}
+#crgroup_name_field
+{
+  background-color: #ebebeb;
+  color: #d6d6d6;
+}
+#crgroup_button
+{
+  color: #343740;
+  background: #d6d6d6;
+  border: .5px solid #d6d6d6;
+}
+#crgroup_button:hover {
+  background: #343740;
+  color: #d6d6d6;
+}
+#profile_box
+{
+  background-color: #343740;
+  box-shadow: 0 0 0 3px #777b86;
+}
+#username_profile
+{
+  color: #ebebeb;
+}
+#status_profile
+{
+  color: rgba(235, 235, 235, 0.6);
+}
+#sendmessage_profile
+{
+  color: #343740;
+  background: #d6d6d6;
+  border: .5px solid #d6d6d6;
+}
+#sendmessage_profile:hover {
+  background: #343740;
+  color: #d6d6d6;
+}
+#trash_delete:hover
+{
+  background-color: #d6d6d6;
+}
+#remove_user:hover
+{
+  background-color: #d6d6d6;
+}
+#databox_profile
+{
+  background: linear-gradient(90deg, rgb(65, 69, 80) 50%, rgba(52, 55, 64, 0.7) 80%, rgba(52, 55, 64, 0) 100%);
+}
+#infolabel_profile
+{
+  color: #ebebeb;
+  background-color: rgba(52, 55, 64, 0.6);
+}
+#realdata_profile
+{
+  color: rgba(235, 235, 235, 0.8);
+  background-color: #272930;
+}

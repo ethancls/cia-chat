@@ -1,0 +1,82 @@
+#leftbar
+{
+  background-color: #ebebeb;
+}
+
+#homebutton
+{
+  border-radius: 13px;
+  background-color: #343740;
+  background-image: url("../../../images/home-light.png");
+}
+#homebutton:hover
+{
+  border-radius: 10px;
+  background-color: rgba(52, 55, 64, 0.7);
+}
+#homebutton:link
+{
+  border-radius: 10px;
+  background-color: rgba(52, 55, 64, 0.7);
+}
+
+#msgbutton
+{
+  background-image: url("../../../images/messanger.png");
+}
+#msgbutton:hover
+{
+  background-color: #dddddd;
+}
+#msgbutton:link
+{
+  background-color: #d6d6d6;
+}
+
+#groupbutton
+{
+  background-image: url("../../../images/team.png");
+}
+#groupbutton:hover
+{
+  background-color: #dddddd;
+}
+#groupbutton:link
+{
+  background-color: #d6d6d6;
+}
+
+#eventsbutton
+{
+  background-image: url("../../../images/events.png");
+}
+#eventsbutton:hover
+{
+  background-color: #dddddd;
+}
+#eventsbutton:link
+{
+  background-color: #d6d6d6;
+}
+
+#statusbutton:hover
+{
+  background-color: #dddddd;
+}
+#statusbutton:link
+{
+  background-color: #d6d6d6;
+}
+
+#settingsbutton
+{
+  background-image: url("../../../images/settings-light.png");
+}
+#settingsbutton:hover
+{
+  background-color: #dddddd;
+}
+#settingsbutton:link
+{
+  background-color: #d6d6d6;
+}

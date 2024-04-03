@@ -1,0 +1,83 @@
+#homescreen
+{
+  background: #d6d6d6;
+}
+#activity
+{
+  background: #ebebeb;
+}
+#active_text
+{
+  color: #343740;
+}
+#fact
+{
+  background: #ebebeb;
+}
+#fact:hover
+{
+  background-color: rgba(235, 235, 235, 0.5);
+  box-shadow: inset 0 0 0 0.5px rgba(204, 204, 204, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(204, 204, 204, 0.6);
+  box-shadow: inset 0 0 1px 3px rgb(204, 204, 204);
+}
+#fact_text
+{
+  color: #343740;
+}
+#pokemon-text
+{
+  color: #343740;
+}
+#welcome
+{
+  background-image: url("../../../images/welcome_light.png");
+}
+#tomsg
+{
+  background-image: url("../../../images/tomsg_text_light.png");
+}
+#togroup
+{
+  background-image: url("../../../images/togroup_text_light.png");
+}
+#tosettings
+{
+  background-image: url("../../../images/tosettings_text_light.png");
+}
+#tomsg:hover
+{
+  box-shadow: inset 0 0 0 1px rgba(204, 204, 204, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(204, 204, 204, 0.6);
+  box-shadow: inset 0 0 1px 3px rgb(204, 204, 204);
+}
+#togroup:hover
+{
+  box-shadow: inset 0 0 0 1px rgba(204, 204, 204, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(204, 204, 204, 0.6);
+  box-shadow: inset 0 0 1px 3px rgb(204, 204, 204);
+}
+#tosettings:hover
+{
+  box-shadow: inset 0 0 0 1px rgba(204, 204, 204, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(204, 204, 204, 0.6);
+  box-shadow: inset 0 0 1px 3px rgb(204, 204, 204);
+}
+#active:hover
+{
+  background: #d6d6d6;
+}
+#active_name
+{
+  color: #343740;
+}
+
+#notification_body
+{
+  background-color: #ebebeb;
+  box-shadow: inset 0 0 0 2.5px rgb(204, 204, 204);
+}
+#notification_text
+{
+  color: #343740;
+}

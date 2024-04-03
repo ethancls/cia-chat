@@ -1,0 +1,26 @@
+/* style.css */
+window {
+    background-image: url('./cia-background.jpg');
+    background-size: cover;
+    background-color: #000000;
+    color: #FFFFFF;
+}
+
+
+
+login_window {
+    background-image: url("cia-background.jpg");
+    background-size: cover;
+    background-position: center;
+}
+
+button {
+    color: #000000;
+    padding: 4px;
+}
+
+menu {
+    border: 2px;
+    border-style: solid;
+    border-color: rgb(255, 0, 0);
+}
