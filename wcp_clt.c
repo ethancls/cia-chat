@@ -131,7 +131,7 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 }
 
 
-query_t construire_message(request_e inst, char * content,convo_T * conv, user_t * user){
+query_t construire_message(request_e inst, char * content,convo_t * conv, user_t * user){
 
 	query_t query;
 	
@@ -167,19 +167,42 @@ query_t construire_message(request_e inst, char * content,convo_T * conv, user_t
 		break;
 	case UPDATE:
 		write_query_end(&query,"UPDATE\\");
+		char * idconvo = &(conv->c_Id)//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
+		char * parser = malloc(5);
+		for(int i = 0; i < 4; i++){
+			parser[i] = idconvo[i];
+		}
+		parser[4] = '\0';
+		write_query_end(&query,parser);
+		free(parser);
+		write_query_end(&query,"\\");
 		break;
 	case CREATE:
 		write_query_end(&query,"CREATE\\");
+		
+		char * nom = strtok(content,"\\");
+		write_query_end(&query,nom);
+		write_query_end(&query,"\\");
+		while((nom = strtok(content,"\\")) != NULL){
+			write_query_end(&query,nom);
+			write_query_end(&query,"\\");
+		}
 		break;
 	case ADD:
 		write_query_end(&query,"ADD\\");
+		char * nom = strtok(content,"\\");
+		write_query_end(&query,nom);
+		write_query_end(&query,"\\");
 		break;
 	case OK:
 		write_query_end(&query,"OK\\");
 		break;
 	default:
+		printf("invalide request");
 		break;
 	}
+
+	return query;
 }
 
 /*uint16_t recevoir_liste_comptines(int fd){	
