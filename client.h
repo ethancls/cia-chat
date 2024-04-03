@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -26,6 +27,7 @@ gboolean scroll_to_bottom(gpointer text_view);
 void append_to_text_view(const gchar *text);
 gboolean file_exists(const char *filename);
 void load_chat_history();
+gboolean get_conversation_id(const char* user_name, const char* partner_name, char* conversation_id);
 
 // Déclarations des variables globales
 GtkWidget *login_window;
@@ -41,4 +43,6 @@ GtkWidget *signin_username_entry;
 GtkWidget *signin_password_entry;
 GtkWidget *signin_firstname_entry;
 GtkWidget *signin_lastname_entry;
+GtkWidget *listbox;
+gchar actual_conversation[64];
 gchar user_name[64];

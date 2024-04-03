@@ -12,17 +12,19 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
-void hash_password(const char* password, char* hashed_password_hex) {
+void hash_password(const char *password, char *hashed_password_hex)
+{
     unsigned char hashed_password[SHA256_DIGEST_LENGTH];
-    SHA256((const unsigned char*)password, strlen(password), hashed_password);
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+    SHA256((const unsigned char *)password, strlen(password), hashed_password);
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
         sprintf(hashed_password_hex + (i * 2), "%02x", hashed_password[i]);
     }
     hashed_password_hex[SHA256_DIGEST_LENGTH * 2] = '\0';
 }
 
-
-gboolean validate_login(const gchar *username, const gchar *password) {
+gboolean validate_login(const gchar *username, const gchar *password)
+{
     gboolean valid = FALSE;
     gchar line[256];
     gchar *file_username;
@@ -34,11 +36,13 @@ gboolean validate_login(const gchar *username, const gchar *password) {
     hash_password(password, hashed_password_hex);
 
     FILE *file = fopen("./database/login.txt", "r");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         return FALSE;
     }
 
-    while (fgets(line, sizeof(line), file) != NULL) {
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
         // Supprime le saut de ligne à la fin si présent
         line[strcspn(line, "\r\n")] = 0;
 
@@ -47,7 +51,8 @@ gboolean validate_login(const gchar *username, const gchar *password) {
 
         if (file_username && file_password_hash &&
             strcmp(username, file_username) == 0 &&
-            strcmp(hashed_password_hex, file_password_hash) == 0) {
+            strcmp(hashed_password_hex, file_password_hash) == 0)
+        {
             valid = TRUE;
             break;
         }
@@ -109,6 +114,98 @@ void logout(GtkWidget *widget, gpointer data)
     gtk_widget_show_all(login_window);
 }
 
+void on_contact_clicked(GtkWidget *widget, gpointer data)
+{
+    const gchar *contact_name = gtk_button_get_label(GTK_BUTTON(widget));
+
+    strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
+
+    load_chat_history();
+}
+
+gboolean is_contact_valid(const gchar *contact_name)
+{
+    char line[256];
+    gboolean contact_found = FALSE;
+    gchar *file_username;
+    gchar *saveptr;
+
+    FILE *file = fopen("./database/login.txt", "r");
+    if (file == NULL)
+    {
+        return FALSE;
+    }
+
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        // Supprime le saut de ligne à la fin si présent
+        line[strcspn(line, "\r\n")] = 0;
+
+        file_username = strtok_r(line, ";", &saveptr);
+
+        if (strcmp(contact_name, file_username) == 0)
+        {
+            contact_found = TRUE;
+            break;
+        }
+    }
+    fclose(file);
+
+    // Check already a conversation with this contact
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
+    file = fopen(filePath, "r");
+    if (file != NULL)
+    {
+        char line[512];
+        int line_count = 0;
+        while (fgets(line, sizeof(line), file) != NULL)
+        {
+            if (line_count >= 2)
+            {
+                char *file_partner_name = strtok(line, ";");
+                if (strcmp(contact_name, file_partner_name) == 0)
+                {
+                    contact_found = FALSE;
+                    break;
+                }
+            }
+            line_count++;
+        }
+        fclose(file);
+    }
+
+    return contact_found;
+}
+
+void create_new_conversation(GtkWidget *widget, gpointer data)
+{
+    gchar *contact_name = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
+    g_strstrip(contact_name);
+    if (contact_name[0] == '\0')
+        return;
+
+    // Vérifier si le contact est valide
+    if (!is_contact_valid(contact_name))
+    {
+        printf("Invalid contact name.\n");
+        gtk_entry_set_text(GTK_ENTRY(data), "");
+        return;
+    }
+
+    // Create listbox item
+    GtkWidget *listbox_item = gtk_button_new_with_label(contact_name);
+    gtk_widget_set_name(listbox_item, "contact_button");
+    g_signal_connect(listbox_item, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+    gtk_list_box_insert(GTK_LIST_BOX(listbox), listbox_item, -1);
+
+    // Clear the entry
+    gtk_entry_set_text(GTK_ENTRY(data), "");
+
+    // Rafraîchir l'affichage de la fenêtre
+    gtk_widget_show_all(chat_window);
+}
+
 void open_chat_window()
 {
     // Crée un provider CSS
@@ -117,37 +214,72 @@ void open_chat_window()
 
     // Création de la fenêtre de chat
     chat_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(chat_window), "CIA Chat");
+    char title[64];
+    snprintf(title, sizeof(title), "Welcome Agent %s !", user_name);
+    gtk_window_set_title(GTK_WINDOW(chat_window), title);
 
     gtk_window_set_default_size(GTK_WINDOW(chat_window), 1920 * 0.5, 1200 * 0.5);
     gtk_window_set_position(GTK_WINDOW(chat_window), GTK_WIN_POS_CENTER);
     g_signal_connect(chat_window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
-    gtk_window_set_keep_above(GTK_WINDOW(chat_window), TRUE); // Garde la fenêtre au premier plan
-
     // Création d'une boîte horizontale pour organiser les widgets
     GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_widget_set_name(hbox, "chat_area");
     gtk_container_add(GTK_CONTAINER(chat_window), hbox);
+
+    // Création d'une boîte verticale pour organiser les widgets du côté gauche
+    GtkWidget *vbox_left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_box_pack_start(GTK_BOX(hbox), vbox_left, FALSE, FALSE, 0);
+
+    // Création de la boîte horizontale contenant l'entrée et le bouton
+    GtkWidget *hbox_entry = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_set_homogeneous(GTK_BOX(hbox_entry), FALSE);
+
+    // Champ de saisie pour le nom du contact
+    GtkWidget *contact_entry = gtk_entry_new();
+    gtk_widget_set_name(contact_entry, "contact_entry");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(contact_entry), "Enter contact name...");
+    gtk_box_pack_start(GTK_BOX(hbox_entry), contact_entry, TRUE, TRUE, 0);
+    g_signal_connect(contact_entry, "activate", G_CALLBACK(create_new_conversation), contact_entry);
+
+    // Bouton pour créer une nouvelle conversation
+    GtkWidget *new_conv_button = gtk_button_new_with_label("New");
+    gtk_widget_set_name(new_conv_button, "conv_button");
+    g_signal_connect(new_conv_button, "clicked", G_CALLBACK(create_new_conversation), contact_entry);
+    gtk_box_pack_start(GTK_BOX(hbox_entry), new_conv_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vbox_left), hbox_entry, FALSE, FALSE, 0);
 
     // Création du menu défilant à gauche
     GtkWidget *scroll_menu = gtk_scrolled_window_new(NULL, NULL);
     gtk_widget_set_name(scroll_menu, "scrollable_msg");
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_menu), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_size_request(scroll_menu, 100, -1); // Ajustement de la largeur minimale du menu
-    gtk_box_pack_start(GTK_BOX(hbox), scroll_menu, FALSE, TRUE, 0);
+    gtk_widget_set_size_request(scroll_menu, 100, -1);                  // Ajustement de la largeur minimale du menu
+    gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, TRUE, TRUE, 0); // Ajout de la propriété expand à TRUE
 
-    GtkWidget *listbox = gtk_list_box_new();
+    listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
 
-    // Ajouter des éléments au menu défilant (remplacer par votre propre logique)
-    GtkWidget *item1 = gtk_button_new_with_label("Marcus");
-    GtkWidget *item2 = gtk_button_new_with_label("Tom");
-    GtkWidget *item3 = gtk_button_new_with_label("Jake");
-
-    // Ajoutez les éléments à la liste
-    gtk_container_add(GTK_CONTAINER(listbox), item1);
-    gtk_container_add(GTK_CONTAINER(listbox), item2);
-    gtk_container_add(GTK_CONTAINER(listbox), item3);
+    // Ajout des contacts déja existants
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
+    FILE *file = fopen(filePath, "r");
+    if (file != NULL)
+    {
+        char line[512];
+        int line_count = 0;
+        while (fgets(line, sizeof(line), file) != NULL)
+        {
+            if (line_count >= 2)
+            {
+                char *file_partner_name = strtok(line, ";");
+                GtkWidget *button = gtk_button_new_with_label(file_partner_name);
+                gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
+                g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+            }
+            line_count++;
+        }
+        fclose(file);
+    }
 
     // Création de la zone principale de chat à droite
     GtkWidget *chat_area = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -185,14 +317,13 @@ void open_chat_window()
     gtk_entry_set_placeholder_text(GTK_ENTRY(chat_entry), "Type your message here...");
     gtk_box_pack_start(GTK_BOX(hbox2), chat_entry, TRUE, TRUE, 0);
 
-    g_signal_connect(chat_entry, "activate", G_CALLBACK(send_message), NULL);
+    g_signal_connect(chat_entry, "activate", G_CALLBACK(send_message), chat_entry);
 
     // Bouton d'envoi
     GtkWidget *send_button = gtk_button_new_with_label("Send");
     gtk_button_set_always_show_image(GTK_BUTTON(send_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(send_button, "clicked", G_CALLBACK(send_message), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), send_button, FALSE, FALSE, 0);
-
 
     // Définir des identifiants CSS pour les widgets
     gtk_widget_set_name(chat_window, "chat_window");
@@ -209,25 +340,25 @@ void open_chat_window()
 
     // Affichage de tous les widgets
     gtk_widget_show_all(chat_window);
-
-    // Charger l'historique de la discussion
-    load_chat_history();
 }
 
-// Fonction pour convertir le hash en une chaîne hexadécimale
-void to_hex_string(unsigned char *hash, char *output, size_t length) {
-    for (size_t i = 0; i < length; i++) {
+void to_hex_string(unsigned char *hash, char *output, size_t length)
+{
+    for (size_t i = 0; i < length; i++)
+    {
         sprintf(output + (i * 2), "%02x", hash[i]);
     }
     output[length * 2] = '\0';
 }
 
-void write_login_to_file(const char *username, const char *password) {
+void write_login_to_file(const char *username, const char *password)
+{
     unsigned char hash[SHA256_DIGEST_LENGTH];
     char hex_string[SHA256_DIGEST_LENGTH * 2 + 1];
 
     // Hachage du mot de passe
-    if (!SHA256((const unsigned char*)password, strlen(password), hash)) {
+    if (!SHA256((const unsigned char *)password, strlen(password), hash))
+    {
         g_print("Erreur lors du hachage du mot de passe.\n");
         return;
     }
@@ -237,10 +368,13 @@ void write_login_to_file(const char *username, const char *password) {
 
     // Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
     FILE *file = fopen("./database/login.txt", "a"); // Ouvre le fichier en mode append
-    if (file != NULL) {
+    if (file != NULL)
+    {
         fprintf(file, "%s;%s\n", username, hex_string);
         fclose(file);
-    } else {
+    }
+    else
+    {
         g_print("Erreur lors de l'ouverture du fichier.\n");
     }
 }
@@ -276,7 +410,7 @@ void submit_signin(GtkWidget *widget, gpointer data)
     write_login_to_file(trimmed_username, trimmed_password);
 
     char filename[64];
-    snprintf(filename, sizeof(filename), "./database/%s.txt", trimmed_username);
+    snprintf(filename, sizeof(filename), "./database/users/%s.txt", trimmed_username);
 
     FILE *file = fopen(filename, "w");
     if (file != NULL)
@@ -480,12 +614,74 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+char rand_char()
+{
+    const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const size_t charset_size = sizeof(charset) - 1;
+    return charset[rand() % charset_size];
+}
+
+void generate_random_id(char *id, size_t size)
+{
+    srand(time(NULL));
+    for (size_t i = 0; i < size; ++i)
+    {
+        id[i] = rand_char();
+    }
+    id[size - 1] = '\0'; // Null-terminate the string
+}
+
+void create_new_conversation_file(const char *conv_name)
+{
+    char chat_id[37]; // 36 characters + '\0'
+    generate_random_id(chat_id, sizeof(chat_id));
+
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", chat_id);
+
+    FILE *file = fopen(filePath, "w");
+    if (file != NULL)
+    {
+        fclose(file);
+        char filePath[256];
+        snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
+
+        FILE *file = fopen(filePath, "a");
+        if (file != NULL)
+        {
+            fprintf(file, "%s;%s\n", conv_name, chat_id);
+            fclose(file);
+        }
+        else
+        {
+            printf("Error appending data to %s\n", filePath);
+        }
+
+        snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", conv_name);
+
+        file = fopen(filePath, "a");
+        if (file != NULL)
+        {
+            fprintf(file, "%s;%s\n", user_name, chat_id);
+            fclose(file);
+        }
+        else
+        {
+            printf("Error appending data to %s\n", filePath);
+        }
+    }
+    else
+    {
+        printf("Error creating conversation file: %s\n", filePath);
+    }
+}
+
 void send_message(GtkWidget *widget, gpointer data)
 {
     gchar *message = g_strdup(gtk_entry_get_text(GTK_ENTRY(chat_entry)));
-    g_strstrip(message); // Supprime les espaces de début et de fin
+    g_strstrip(message);
     if (message[0] == '\0')
-        return; // Ne rien faire si le message est vide
+        return;
 
     // Construction du message avec le nom de l'utilisateur
     char full_message[512];
@@ -494,8 +690,18 @@ void send_message(GtkWidget *widget, gpointer data)
     // Ajouter le message à la vue de chat
     append_to_text_view(full_message);
 
+    char conversation_id[37];
+    if (!get_conversation_id(user_name, actual_conversation, conversation_id))
+    {
+        create_new_conversation_file(actual_conversation);
+        return;
+    }
+
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", conversation_id);
+
     // Sauvegarder le message dans le fichier
-    FILE *file = fopen("./database/chat_data.txt", "a");
+    FILE *file = fopen(filePath, "a");
     if (file != NULL)
     {
         fputs(full_message, file);
@@ -505,8 +711,6 @@ void send_message(GtkWidget *widget, gpointer data)
     // Effacer le champ de saisie
     gtk_entry_set_text(GTK_ENTRY(chat_entry), "");
 }
-
-gboolean scroll_to_bottom(gpointer text_view);
 
 void append_to_text_view(const gchar *text)
 {
@@ -522,7 +726,6 @@ void append_to_text_view(const gchar *text)
     g_idle_add(scroll_to_bottom, chat_view);
 }
 
-// Fonction de callback pour effectuer le défilement
 gboolean scroll_to_bottom(gpointer data)
 {
     GtkTextView *text_view = GTK_TEXT_VIEW(data);
@@ -546,14 +749,64 @@ gboolean file_exists(const char *filename)
     return FALSE;
 }
 
+gboolean get_conversation_id(const char *user_name, const char *partner_name, char *conversation_id)
+{
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
+    FILE *file = fopen(filePath, "r");
+    if (!file)
+    {
+        return FALSE;
+    }
+
+    char line[512];
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        char *file_partner_name = strtok(line, ";");
+        char *file_conversation_id = strtok(NULL, "\n");
+
+        if (strcmp(file_partner_name, partner_name) == 0)
+        {
+            strcpy(conversation_id, file_conversation_id);
+            fclose(file);
+            return TRUE;
+        }
+    }
+
+    fclose(file);
+    return FALSE;
+}
+
 void load_chat_history()
 {
-    if (!file_exists("./database/chat_data.txt"))
+    // Clear the chat view
+    GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
+    gtk_text_buffer_set_text(buffer, "", -1);
+
+    char conversation_id[37];
+    if (!get_conversation_id(user_name, actual_conversation, conversation_id))
+    {
+        create_new_conversation_file(actual_conversation);
         return;
+    }
 
-    FILE *file = fopen("./database/chat_data.txt", "r");
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", conversation_id);
+
+    if (access(filePath, F_OK) == -1)
+    {
+        printf("File %s not found.\n", filePath);
+        return;
+    }
+
+    FILE *file = fopen(filePath, "r");
+    if (file == NULL)
+    {
+        printf("Error opening file %s\n", filePath);
+        return;
+    }
+
     char line[512];
-
     while (fgets(line, sizeof(line), file) != NULL)
     {
         append_to_text_view(line);
