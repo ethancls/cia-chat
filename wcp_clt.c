@@ -150,7 +150,7 @@ query_t construire_message(request_e inst, char * content,convo_T * conv, user_t
 		break;
 	case SEND:
 		write_query_end(&query,"SEND\\");
-		char * idconvo = &(conv->c_Id)//tres experimental sa vas peut etre changer
+		char * idconvo = &(conv->c_Id)//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
 		char * parser = malloc(5);
 		for(int i = 0; i < 4; i++){
 			parser[i] = idconvo[i];
