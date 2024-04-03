@@ -28,6 +28,7 @@ void append_to_text_view(const gchar *text);
 gboolean file_exists(const char *filename);
 void load_chat_history();
 gboolean get_conversation_id(const char* user_name, const char* partner_name, char* conversation_id);
+void load_contacts_from_file();
 
 // Déclarations des variables globales
 GtkWidget *login_window;

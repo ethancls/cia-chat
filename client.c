@@ -1,6 +1,5 @@
 #include "./client.h"
 
-// Fonction pour charger le fichier CSS
 void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
 {
     gtk_style_context_add_provider(gtk_widget_get_style_context(widget),
@@ -84,23 +83,6 @@ void send_file(GtkWidget *widget, gpointer data)
     printf("Sended file\n");
 }
 
-GdkPixbuf *get_pixbuf_from_file_resized(const char *filename, int width, int height)
-{
-    GError *error = NULL;
-    GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(filename, &error);
-    if (!pixbuf)
-    {
-        g_printerr("Error loading file: %s\n", error->message);
-        g_error_free(error);
-        return NULL;
-    }
-
-    GdkPixbuf *resized_pixbuf = gdk_pixbuf_scale_simple(pixbuf, width, height, GDK_INTERP_BILINEAR);
-    g_object_unref(pixbuf); // Libère la mémoire de l'ancien GdkPixbuf
-
-    return resized_pixbuf; // Retourne le nouveau GdkPixbuf redimensionné
-}
-
 void logout(GtkWidget *widget, gpointer data)
 {
     // Cache la fenêtre de chat
@@ -138,7 +120,6 @@ gboolean is_contact_valid(const gchar *contact_name)
 
     while (fgets(line, sizeof(line), file) != NULL)
     {
-        // Supprime le saut de ligne à la fin si présent
         line[strcspn(line, "\r\n")] = 0;
 
         file_username = strtok_r(line, ";", &saveptr);
@@ -175,7 +156,28 @@ gboolean is_contact_valid(const gchar *contact_name)
         fclose(file);
     }
 
+    if(strcmp(user_name, contact_name) == 0){
+        contact_found = FALSE;
+    }
+
     return contact_found;
+}
+
+// Déclarez la fonction de temporisation
+gboolean reload_messages(gpointer user_data)
+{
+    load_chat_history();
+    return TRUE;
+}
+
+// Fonction pour démarrer la temporisation
+void start_message_reload_timer()
+{
+    // Spécifiez l'intervalle en millisecondes (2 secondes = 2000 millisecondes)
+    const guint interval_milliseconds = 2000;
+
+    // Ajoutez une temporisation périodique avec l'intervalle spécifié
+    g_timeout_add(interval_milliseconds, reload_messages, NULL);
 }
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
@@ -204,6 +206,30 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 
     // Rafraîchir l'affichage de la fenêtre
     gtk_widget_show_all(chat_window);
+}
+
+void load_contacts_from_file() {
+
+    gchar filePath[256];
+    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
+    FILE *file = fopen(filePath, "r");
+    if (file != NULL) {
+        gchar line[512];
+        gint line_count = 0;
+        while (fgets(line, sizeof(line), file) != NULL) {
+            if (line_count >= 2) {
+                gchar *file_partner_name = strtok(line, ";");
+                GtkWidget *button = gtk_button_new_with_label(file_partner_name);
+                gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
+                g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+            }
+            line_count++;
+        }
+        fclose(file);
+    }
+    else {
+        printf("Error opening file %s\n", filePath);
+    }
 }
 
 void open_chat_window()
@@ -259,27 +285,7 @@ void open_chat_window()
     listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
 
-    // Ajout des contacts déja existants
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
-    FILE *file = fopen(filePath, "r");
-    if (file != NULL)
-    {
-        char line[512];
-        int line_count = 0;
-        while (fgets(line, sizeof(line), file) != NULL)
-        {
-            if (line_count >= 2)
-            {
-                char *file_partner_name = strtok(line, ";");
-                GtkWidget *button = gtk_button_new_with_label(file_partner_name);
-                gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
-                g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-            }
-            line_count++;
-        }
-        fclose(file);
-    }
+    load_contacts_from_file();
 
     // Création de la zone principale de chat à droite
     GtkWidget *chat_area = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -340,6 +346,8 @@ void open_chat_window()
 
     // Affichage de tous les widgets
     gtk_widget_show_all(chat_window);
+
+    start_message_reload_timer();
 }
 
 void to_hex_string(unsigned char *hash, char *output, size_t length)
@@ -367,7 +375,7 @@ void write_login_to_file(const char *username, const char *password)
     to_hex_string(hash, hex_string, sizeof(hash));
 
     // Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
-    FILE *file = fopen("./database/login.txt", "a"); // Ouvre le fichier en mode append
+    FILE *file = fopen("./database/login.txt", "a");
     if (file != NULL)
     {
         fprintf(file, "%s;%s\n", username, hex_string);
@@ -633,7 +641,7 @@ void generate_random_id(char *id, size_t size)
 
 void create_new_conversation_file(const char *conv_name)
 {
-    char chat_id[37]; // 36 characters + '\0'
+    char chat_id[37];
     generate_random_id(chat_id, sizeof(chat_id));
 
     char filePath[256];
@@ -644,6 +652,7 @@ void create_new_conversation_file(const char *conv_name)
     {
         fclose(file);
         char filePath[256];
+        printf("Creating conversation file: %s, %s\n", conv_name, user_name);
         snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
 
         FILE *file = fopen(filePath, "a");
@@ -786,7 +795,6 @@ void load_chat_history()
     char conversation_id[37];
     if (!get_conversation_id(user_name, actual_conversation, conversation_id))
     {
-        create_new_conversation_file(actual_conversation);
         return;
     }
 

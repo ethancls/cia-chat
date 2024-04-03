@@ -33,8 +33,11 @@
 }
 
 #send_button, #logout_button, #file_button, #conv_button{
+    border-image: none;
+    background-image: none;
+    background-color: rgb(32, 85, 121);
+    box-shadow: 0 0 5px 3px #242b42;
     border-radius: 4px;
-    padding: 4px 8px;
 }
 
 #send_button:hover, #logout_button:hover, #file_button:hover {
