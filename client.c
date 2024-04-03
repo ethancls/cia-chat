@@ -182,6 +182,8 @@ void start_message_reload_timer()
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
 {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
     gchar *contact_name = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
     g_strstrip(contact_name);
     if (contact_name[0] == '\0')
@@ -195,21 +197,18 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
 
-    // Create listbox item
     GtkWidget *listbox_item = gtk_button_new_with_label(contact_name);
-    gtk_widget_set_name(listbox_item, "contact_button");
     g_signal_connect(listbox_item, "clicked", G_CALLBACK(on_contact_clicked), NULL);
     gtk_list_box_insert(GTK_LIST_BOX(listbox), listbox_item, -1);
 
-    // Clear the entry
     gtk_entry_set_text(GTK_ENTRY(data), "");
 
-    // Rafraîchir l'affichage de la fenêtre
+    apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
+
     gtk_widget_show_all(chat_window);
 }
 
 void load_contacts_from_file() {
-
     gchar filePath[256];
     snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
     FILE *file = fopen(filePath, "r");
@@ -222,6 +221,7 @@ void load_contacts_from_file() {
                 GtkWidget *button = gtk_button_new_with_label(file_partner_name);
                 gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
                 g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+
             }
             line_count++;
         }
@@ -250,7 +250,6 @@ void open_chat_window()
 
     // Création d'une boîte horizontale pour organiser les widgets
     GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_widget_set_name(hbox, "chat_area");
     gtk_container_add(GTK_CONTAINER(chat_window), hbox);
 
     // Création d'une boîte verticale pour organiser les widgets du côté gauche
@@ -263,21 +262,18 @@ void open_chat_window()
 
     // Champ de saisie pour le nom du contact
     GtkWidget *contact_entry = gtk_entry_new();
-    gtk_widget_set_name(contact_entry, "contact_entry");
     gtk_entry_set_placeholder_text(GTK_ENTRY(contact_entry), "Enter contact name...");
     gtk_box_pack_start(GTK_BOX(hbox_entry), contact_entry, TRUE, TRUE, 0);
     g_signal_connect(contact_entry, "activate", G_CALLBACK(create_new_conversation), contact_entry);
 
     // Bouton pour créer une nouvelle conversation
     GtkWidget *new_conv_button = gtk_button_new_with_label("New");
-    gtk_widget_set_name(new_conv_button, "conv_button");
     g_signal_connect(new_conv_button, "clicked", G_CALLBACK(create_new_conversation), contact_entry);
     gtk_box_pack_start(GTK_BOX(hbox_entry), new_conv_button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vbox_left), hbox_entry, FALSE, FALSE, 0);
 
     // Création du menu défilant à gauche
     GtkWidget *scroll_menu = gtk_scrolled_window_new(NULL, NULL);
-    gtk_widget_set_name(scroll_menu, "scrollable_msg");
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_menu), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     gtk_widget_set_size_request(scroll_menu, 100, -1);                  // Ajustement de la largeur minimale du menu
     gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, TRUE, TRUE, 0); // Ajout de la propriété expand à TRUE
@@ -308,13 +304,11 @@ void open_chat_window()
 
     // Création du bouton pour quitter
     GtkWidget *logout_button = gtk_button_new_with_label("Exit");
-    gtk_button_set_always_show_image(GTK_BUTTON(logout_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(logout_button, "clicked", G_CALLBACK(logout), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), logout_button, FALSE, FALSE, 0);
 
     // Création du bouton d'envoi de fichier
     GtkWidget *file_button = gtk_button_new_with_label("Load File");
-    gtk_button_set_always_show_image(GTK_BUTTON(file_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(file_button, "clicked", G_CALLBACK(send_file), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), file_button, FALSE, FALSE, 0);
 
@@ -332,12 +326,15 @@ void open_chat_window()
     gtk_box_pack_start(GTK_BOX(hbox2), send_button, FALSE, FALSE, 0);
 
     // Définir des identifiants CSS pour les widgets
+    gtk_widget_set_name(hbox, "chat_area");
+    gtk_widget_set_name(contact_entry, "contact_entry");
     gtk_widget_set_name(chat_window, "chat_window");
-    gtk_widget_set_name(scroll_menu, "scroll_menu");
+    gtk_widget_set_name(listbox, "listbox");
     gtk_widget_set_name(chat_area, "chat_area");
-    gtk_widget_set_name(chat_view, "chat_view");
     gtk_widget_set_name(chat_entry, "chat_entry");
+    gtk_widget_set_name(scrolled_window, "chat_scrolled_window");
     gtk_widget_set_name(send_button, "send_button");
+    gtk_widget_set_name(new_conv_button, "new_button");
     gtk_widget_set_name(logout_button, "logout_button");
     gtk_widget_set_name(file_button, "file_button");
 
@@ -692,6 +689,9 @@ void send_message(GtkWidget *widget, gpointer data)
     if (message[0] == '\0')
         return;
 
+    if(user_name[0] == '\0' || actual_conversation[0] == '\0'){
+        return;
+    }
     // Construction du message avec le nom de l'utilisateur
     char full_message[512];
     snprintf(full_message, sizeof(full_message), "%s: %s\n", user_name, message);

@@ -8,6 +8,7 @@
 #scroll_menu {
     border-radius: 5px;
     padding: 10px;
+    background-color: #000000;
     box-shadow: 0 0 5px 3px #242b42;
 }
 
@@ -23,7 +24,8 @@
     box-shadow: 0 0 5px 3px #242b42;
 }
 
-#chat_entry , #contact_entry{
+#chat_entry,
+#contact_entry {
     background-color: #000000;
     color: #ffffff;
     border: 1px solid #0055ff;
@@ -32,14 +34,54 @@
     box-shadow: 0 0 5px 3px #242b42;
 }
 
-#send_button, #logout_button, #file_button, #conv_button{
+#send_button,
+#logout_button,
+#file_button,
+#new_button,
+#contact_button {
     border-image: none;
+    border-color: #000000;
     background-image: none;
-    background-color: rgb(32, 85, 121);
+    color: #ffffff;
     box-shadow: 0 0 5px 3px #242b42;
     border-radius: 4px;
 }
 
-#send_button:hover, #logout_button:hover, #file_button:hover {
-    background-color: #ff0000;
+#send_button:hover,
+#logout_button:hover,
+#file_button:hover,
+#new_button:hover {
+    background-color: #242b42;
+}
+
+list {
+    border-image: none;
+    background-color: black;
+    background-image: none;
+    box-shadow: 0 0 5px 3px #242b42;
+    border-radius: 4px;
+}
+
+list row {
+    padding: 10px 20px 10px 20px;
+    background-color: #000000;
+}
+
+list row button {
+    border-image: none;
+    border-color: #000000;
+    background-image: none;
+    color: #ffffff;
+    box-shadow: 0 0 5px 3px #242b42;
+    border-radius: 4px;
+}
+
+list row button:selected,
+list row button:hover{
+    background-color: #242b42;
+}
+
+textview selection {
+    background-color: #4a90d9;
+    color: #ffffff;
 }
