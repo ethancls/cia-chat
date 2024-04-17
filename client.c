@@ -81,6 +81,7 @@ void login(GtkWidget *widget, gpointer data)
 void send_file(GtkWidget *widget, gpointer data)
 {
     printf("Sended file\n");
+    return;
 }
 
 void logout(GtkWidget *widget, gpointer data)
@@ -156,7 +157,8 @@ gboolean is_contact_valid(const gchar *contact_name)
         fclose(file);
     }
 
-    if(strcmp(user_name, contact_name) == 0){
+    if (strcmp(user_name, contact_name) == 0)
+    {
         contact_found = FALSE;
     }
 
@@ -173,8 +175,8 @@ gboolean reload_messages(gpointer user_data)
 // Fonction pour démarrer la temporisation
 void start_message_reload_timer()
 {
-    // Spécifiez l'intervalle en millisecondes (2 secondes = 2000 millisecondes)
-    const guint interval_milliseconds = 2000;
+    // Spécifiez l'intervalle en millisecondes
+    const guint interval_milliseconds = 100;
 
     // Ajoutez une temporisation périodique avec l'intervalle spécifié
     g_timeout_add(interval_milliseconds, reload_messages, NULL);
@@ -197,6 +199,8 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
 
+    strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
+
     GtkWidget *listbox_item = gtk_button_new_with_label(contact_name);
     g_signal_connect(listbox_item, "clicked", G_CALLBACK(on_contact_clicked), NULL);
     gtk_list_box_insert(GTK_LIST_BOX(listbox), listbox_item, -1);
@@ -208,26 +212,35 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
     gtk_widget_show_all(chat_window);
 }
 
-void load_contacts_from_file() {
+void load_contacts_from_file()
+{
     gchar filePath[256];
     snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
     FILE *file = fopen(filePath, "r");
-    if (file != NULL) {
+    if (file != NULL)
+    {
         gchar line[512];
-        gint line_count = 0;
-        while (fgets(line, sizeof(line), file) != NULL) {
-            if (line_count >= 2) {
-                gchar *file_partner_name = strtok(line, ";");
-                GtkWidget *button = gtk_button_new_with_label(file_partner_name);
+        gint line_count = 1;
+        while (fgets(line, sizeof(line), file) != NULL)
+        {
+            if (line_count > NB_LIGNES_INFOS)
+            {
+                gchar *contact_name = strtok(line, ";");
+                if (line_count == NB_LIGNES_INFOS + 1)
+                {
+                    strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
+                }
+                GtkWidget *button = gtk_button_new_with_label(contact_name);
                 gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
                 g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-
             }
             line_count++;
         }
+
         fclose(file);
     }
-    else {
+    else
+    {
         printf("Error opening file %s\n", filePath);
     }
 }
@@ -321,7 +334,6 @@ void open_chat_window()
 
     // Bouton d'envoi
     GtkWidget *send_button = gtk_button_new_with_label("Send");
-    gtk_button_set_always_show_image(GTK_BUTTON(send_button), FALSE); // Cette ligne peut être retirée puisqu'il n'y a plus d'image
     g_signal_connect(send_button, "clicked", G_CALLBACK(send_message), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), send_button, FALSE, FALSE, 0);
 
@@ -687,9 +699,13 @@ void send_message(GtkWidget *widget, gpointer data)
     gchar *message = g_strdup(gtk_entry_get_text(GTK_ENTRY(chat_entry)));
     g_strstrip(message);
     if (message[0] == '\0')
+    {
+        printf("Empty message\n");
         return;
-
-    if(user_name[0] == '\0' || actual_conversation[0] == '\0'){
+    }
+    if (user_name[0] == '\0' || actual_conversation[0] == '\0')
+    {
+        printf("Select a conversation\n");
         return;
     }
     // Construction du message avec le nom de l'utilisateur

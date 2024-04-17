@@ -16,7 +16,7 @@ Je déclare qu'il s'agit de mon propre travail. */
 /* spécifique à internet */
 #include <arpa/inet.h> /* inet_pton */
 /* spécifique aux comptines */
-#include "comptine_utils.h"
+
 #include <pthread.h>
 
 #define PORT_WCP 4321

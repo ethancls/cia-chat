@@ -13,30 +13,29 @@ Je déclare qu'il s'agit de mon propre travail. */
 #include <sys/socket.h>
 /* spécifique à internet */
 #include <arpa/inet.h> /* inet_pton */
-/* spécifique aux comptines */
-#include "comptine_utils.h"
+
 
 #define PORT_WCP 4321
 
 typedef struct query_{
 	char content[2048];//taille temporaire
 	uint16_t size;
-} query_t
+} query_t;
 
 
 typedef struct utilisateur{
 	uint32_t u_Id;//doit etre le meme entre serveur et le client
 	char * u_pseudo;
-}user_t
+}user_t;
 
 typedef struct conversation_{
 	uint32_t c_Id;//doit etre le meme entre serveur et le client
-	user_t[30] c_users;
+	user_t c_users[30];
 	char * contenue;// contient le texte qui compose la conversation
-}convo_T;
+}convo_t;
 
 typedef struct feed{
-	convo_T[1024] f_conv;
+	convo_t f_conv[1024];
 	uint32_t f_nbConv;
 }feed_t;
 
@@ -46,7 +45,7 @@ typedef enum{
 	UPDATE,
 	CREATE,
 	ADD,
-	OK,
+	OKR,
 
 }request_e;
 
@@ -56,7 +55,7 @@ typedef enum{
 	LOG_OK,
 	LOG_FAILED,
 	DENIED,
-	OK,
+	OKS,
 
 }serveur_e;
 
@@ -76,11 +75,11 @@ void write_query_end(query_t * q,char * wr);
 
 query_t nouvelle_conversation(uint32_t myId);
 
-query_t login(char * username,char * password)
+query_t login(char * username,char * password);
 
 void interpreter_message(int fd);//bloquant
 
-query_t construire_message(request_e inst, char * content,convo_T * conv, user_t * user);
+query_t construire_message(request_e inst, char * content,convo_t * conv, user_t * user);
 
 void envoyer_message(int fd, char * message);
 
@@ -150,7 +149,7 @@ query_t construire_message(request_e inst, char * content,convo_t * conv, user_t
 		break;
 	case SEND:
 		write_query_end(&query,"SEND\\");
-		char * idconvo = &(conv->c_Id)//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
+		char * idconvo = &(conv->c_Id);//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
 		char * parser = malloc(5);
 		for(int i = 0; i < 4; i++){
 			parser[i] = idconvo[i];
@@ -167,7 +166,7 @@ query_t construire_message(request_e inst, char * content,convo_t * conv, user_t
 		break;
 	case UPDATE:
 		write_query_end(&query,"UPDATE\\");
-		char * idconvo = &(conv->c_Id)//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
+		char * idconvo = &(conv->c_Id);//tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
 		char * parser = malloc(5);
 		for(int i = 0; i < 4; i++){
 			parser[i] = idconvo[i];
@@ -194,7 +193,7 @@ query_t construire_message(request_e inst, char * content,convo_t * conv, user_t
 		write_query_end(&query,nom);
 		write_query_end(&query,"\\");
 		break;
-	case OK:
+	case OKR:
 		write_query_end(&query,"OK\\");
 		break;
 	default:
