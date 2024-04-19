@@ -15,13 +15,20 @@
                 "/opt/homebrew/include/atk-1.0",
                 "/opt/homebrew/opt/openssl@1.1",
                 "/opt/homebrew/Cellar/openssl@3/3.2.1/include",
-                "/opt/homebrew/opt/openssl@3/include/openssl/"
+                "/opt/homebrew/opt/openssl@3/include/openssl/",
+                "/usr/include/gtk-3.0",
+                "/usr/include/glib-2.0",
+                "/usr/lib/x86_64-linux-gnu/glib-2.0/include",
+                "/usr/include/pango-1.0",
+                "/usr/include/cairo",
+                "/usr/include/gdk-pixbuf-2.0",
+                "/usr/include/atk-1.0",
+                "/usr/include/gtk-3.0/gtk/gtk.h"
             ],
             "defines": [],
             "macFrameworkPath": [
                 "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],
-            "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "macos-clang-arm64"

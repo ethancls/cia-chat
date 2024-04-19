@@ -11,6 +11,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+//gcc -Wall `pkg-config --cflags gtk+-3.0` client.c -o cia-chat `pkg-config --libs gtk+-3.0` -lssl -lcrypto
+
 #define NB_LIGNES_INFOS 2
 
 // Déclarations des fonctions

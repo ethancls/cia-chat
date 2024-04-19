@@ -33,3 +33,6 @@ ethan: sdd
 tismey: rapide
 tismey: fash
 ethan: we
+ethan: calut
+ethan: coucou
+ethan: salam

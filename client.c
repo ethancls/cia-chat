@@ -61,12 +61,12 @@ gboolean validate_login(const gchar *username, const gchar *password)
     return valid;
 }
 
-void login(GtkWidget *widget, gpointer data)
+void login(GtkWidget *widget, gpointer data)// envoyer token au serveur
 {
     const gchar *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
     const gchar *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
 
-    if (validate_login(username, password))
+    if (validate_login(username, password)) // recoit la réponse 0 ou -1
     {
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
@@ -84,7 +84,7 @@ void send_file(GtkWidget *widget, gpointer data)
     return;
 }
 
-void logout(GtkWidget *widget, gpointer data)
+void logout(GtkWidget *widget, gpointer data) // envoyer logout seveur
 {
     // Cache la fenêtre de chat
     gtk_widget_hide(chat_window);
@@ -176,7 +176,7 @@ gboolean reload_messages(gpointer user_data)
 void start_message_reload_timer()
 {
     // Spécifiez l'intervalle en millisecondes
-    const guint interval_milliseconds = 100;
+    const guint interval_milliseconds = 2000;
 
     // Ajoutez une temporisation périodique avec l'intervalle spécifié
     g_timeout_add(interval_milliseconds, reload_messages, NULL);
@@ -253,7 +253,7 @@ void open_chat_window()
 
     // Création de la fenêtre de chat
     chat_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    char title[64];
+    char title[128];
     snprintf(title, sizeof(title), "Welcome Agent %s !", user_name);
     gtk_window_set_title(GTK_WINDOW(chat_window), title);
 
@@ -396,7 +396,7 @@ void write_login_to_file(const char *username, const char *password)
     }
 }
 
-void submit_signin(GtkWidget *widget, gpointer data)
+void submit_signin(GtkWidget *widget, gpointer data) //envoyer
 {
     // Obtenez le nom d'utilisateur et le mot de passe des entrées
     const char *username = g_strdup(gtk_entry_get_text(GTK_ENTRY(signin_username_entry)));

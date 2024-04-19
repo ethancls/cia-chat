@@ -2,5 +2,7 @@
     "files.associations": {
         "*.c": "c",
         "client.h": "c"
-    }
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/clang",
+    "C_Cpp.errorSquiggles": "disabled"
 }
