@@ -141,6 +141,10 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 	return sock;  
 }
 
+void interpreter_message(int fd){
+	
+}
+
 
 query_t construire_message(request_e inst, char * content,convo_t * conv, user_t * user){
 
