@@ -18,8 +18,85 @@ Je déclare qu'il s'agit de mon propre travail. */
 /* spécifique aux comptines */
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #define PORT_WCP 4321
+
+#define RECEIVED_CLIENT 10
+
+const char PATH_USER ="";
+
+const char PATH_CONV = "";
+
+
+typedef enum{
+	LOG,
+	SEND,
+	UPDATE,
+	CREATE,
+	ADD,
+	OKR,
+
+}request_e;
+
+typedef enum{
+	CONV,
+	USERID,
+	LOG_OK,
+	LOG_FAILED,
+	DENIED,
+	OKS,
+
+}serveur_e;
+
+typedef struct dymTab{
+	void * tab;
+	uint16_t size;
+	size_t type;
+} dymTab_t;
+
+
+typedef struct UserData{
+	char * userID;
+	char ** conversationID;
+	int nbConv;
+
+}UserData_t;
+
+typedef struct query_{
+	char content[2048];//taille temporaire
+	uint16_t size;
+} query_t;
+
+
+typedef struct masterDb{
+	UserData_t ** Users;
+	int nbUser;
+}masterDb_t;
+
+
+int read_until_nl(int fd, char *buf)
+{
+	int numChar = 0;
+	char *readChar = malloc(sizeof(char));// malloc obligatoire pour pouvoir utiliser read(read ne peut pas ecrire dans le stack ?)
+	int n;
+	while((n = read(fd,readChar,sizeof(char))) > 0){
+		*(buf + numChar) = *readChar;// on ajoute un char dans notre buffer
+		numChar++;
+		if(*readChar == '\n'){ // quand on arrive a '0' on retourne
+			*(buf + numChar) = '\0';// obligatoire sino buffer overflow
+			return numChar;
+		}
+	}
+	if(n < 0){
+		perror("read");
+	}
+	
+	//printf("Error : no \\n or read error ");
+	*buf = '\0';
+	free(readChar);// on libere notre malloc
+	return numChar;
+}
 
 void usage(char *nom_prog)
 {
@@ -60,32 +137,214 @@ void *thread_worker(void *arg) {
 	printf("Nous sommes dans le thread.\n");
 	struct work_args *args = (struct work_args*)arg;// structure qui contient un descripteur fd et un catalogue
 	
-	
-	
 	uint16_t n = 0;
+	char query_content[2048];
 	while(n != 666){
-		envoyer_liste(args->fd,args->cat);// envoyer au client des la connection
-		n = recevoir_num_comptine(args->fd);// attente de la reponse
-		if(n == 666){
-			break;
-		}
-		envoyer_comptine(args->fd,"comptines",args->cat,n);//on passe comptine ici mais on devrait ajouter un buf dans work_args qui prend argv(1): non implémenter par manque de temps
+		
+		int size_query = read_until_nl(args->fd,query_content);
+		query_t q = {.content = query_content, .size = size_query};
+		serv_inteprerte(&q, dbd);
 	}
-	close(args->fd);
-	printf("fin threadworker\n");
 	pthread_exit(EXIT_SUCCESS);
 }
 
+query_t serv_construire_message(request_e inst, char * content){
+
+	query_t query;
+	
+	switch (inst)
+	{
+	case CONV:
+		write_query_end(&query,"CONV\\");
+		char * conv = strtok(content,"\\");
+		char * participant = strtok(NULL,"\\");
+		char * contenueConv = strtok(NULL,"\\");
+		//encryption
+		write_query_end(&query,conv);
+		write_query_end(&query,"\\");
+		write_query_end(&query,participant);
+		write_query_end(&query,"\\");
+		write_query_end(&query,contenueConv);
+		write_query_end(&query,"\\");
+
+		break;
+
+
+		break;
+	case LOG_OK:
+		write_query_end(&query,"LOG_OK\\");
+	
+		break;
+	case LOG_FAILED:
+		write_query_end(&query,"LOG_FAILED\\");
+		break;
+	case DENIED:
+		write_query_end(&query,"DENIED\\");
+	
+	case OKS:
+		write_query_end(&query,"OKS\\");
+		break;
+	default:
+		printf("invalide request");
+		break;
+	}
+
+	return query;
+}
+
+int serv_inteprerte(query_t * q, masterDb_t master){
+
+	char * TOK = strtok(q->content,'\\');
+
+	request_e inst = converte_to_inst(TOK); 
+	
+	switch (inst)
+	{
+	case LOG:
+		char * username = strtok(NULL,'\\');
+		char * password = strtok(NULL,'\\');
+		if(validate_login(username,password) == 'F'){
+			query_t rep = serv_construire_message(LOG_FAILED,NULL);
+			//envoie
+		};
+		int userIndex = 0;
+
+		char * content = malloc(sizeof(char)*592){
+		content[0] = '\0';
+			for(;userIndex < master->nbUser; userIndex++ ){
+				if(!strcmp(username,master->User[userIndex]->userId)){
+					break;
+				}
+			}
+		}
+		for(int i = 0; i < master->User[userIndex]->nbConv;i++){
+			content = strcat(content, master->User[userIndex]->conversationID[i]);
+			content = strcat(content,":");
+		}
+		break;
+		query_t rep = serv_construire_message(LOG_OK,content);
+		//envoie
+
+	case SEND:
+		char * username = strtok(NULL,'\\');
+		UserData_t ** tabUser = master->Users;
+		size_t size = master->Users.size;
+		int check = 0;
+	
+		for(int i = 0; i < size; i++){
+			if(strcmp(username,tabUser[i]->userID)){
+				char * conv = strtok(NULL,'\\');
+				for(int j = 0; j < nbConv; i++ ){
+					if(!strcmp(conv,tabUser[i]->conversationID[j])){
+						check = 1;
+						char * message = strtok(NULL,'\\');
+						char filePath[256];
+						snprintf(filePath, sizeof(filePath), "%s%s.txt",PATH_CONV,conv);
+						//sem_wait
+						int fdConv = open(filePath,WR_ONLY);
+						write(fdConv,message,sizeof(message));
+						close(fdconv);
+						//sem_post
+						break;
+
+					}
+				}
+			}
+		}
+
+		if(check){
+			serv_construire_message(OKS,NULL);
+		}
+		else{
+			serv_construire_message(DENIED,NULL);
+		}
+
+		break;
+	case UPDATE:
+		char * convID = strtok(NULL,'\\');
+		char filePath[256];
+		snprintf(filePath, sizeof(filePath), "%s%s.txt",PATH_CONV,conv);
+		char conv[1024];
+		int fdConv = open(filePath,RD_ONLY);
+		int size_conv = read(fdConv,conv,sizeof(conv));
+		close(fdconv);
+		serv_construire_message()
+		
+	case CREATE:
+		//create conversation 
+		//OKS
+		// renvoyer l'id de la conv au client
+		//OKR
+		break;
+		
+	case OKR:
+		return RECEIVED_CLIENT;
+		break;
+	default:
+		printf("invalide request");
+		break;
+	}
+
+	return query;
+}
+
+
 
 int main(int argc, char *argv[])
-{
+{	
+
+	sem_t sem;
+	sem_init(&sem,0,1);
+
+	masterDb_t * dbd;
+	dbd->Users = malloc(sizeof(UserData_t)*128);
+
 	int kill = 0;
 	if (argc != 2) {
 		usage(argv[0]);
 		return 1;
 	}
 	int sock = creer_configurer_sock_ecoute(PORT_WCP);//creation socket listen
-	struct catalogue *cat = creer_catalogue(argv[1]);
+
+	DIR *d = opendir(PATH_USER);
+
+	if(d == NULL){
+		perror("no dir");
+		
+		return EXIT_FAILURE;
+	}	
+	//check si le fichier est bien dans le dossier
+	struct dirent *entry;
+	int i = 0;
+	while(entry = readdir(d)){
+			char filePath[256];
+		 	snprintf(filePath, sizeof(filePath), "%s%s.txt",PATH_USER, user_name);
+			int fd = open(filePath,O_RDONLY);// ouverture du fichier avec path
+			if(fd == NULL){
+				perror("open");{
+					exit(1);
+				}
+			}
+			char * buffer = (char *)malloc(sizeof(char) *32);
+			read_until_nl(fd,buffer);
+			dbd->Users[i]->userID = buffer;  
+			char * discard = (char *)malloc(sizeof(char) *32);
+			read_until_nl(fd,discard); 
+			free(discard);
+			
+			char ** conv = malloc(sizeof(char*) * 64);
+			for(int i = 0; i < 64; i++){
+				conv[i] = malloc(sizeof(char)*37);
+			}
+			int j = 0;
+			while(1<read_until_nl(fd,conv[j])){
+				i++;
+			}
+			dbd->Users[i]->nbConv = i;
+
+	}
+
+
 	while(1){
 		struct sockaddr_in sa_clt;
 		socklen_t sl = sizeof(sa_clt);
@@ -107,7 +366,43 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int creer_configurer_sock_ecoute(uint16_t port)
+char validate_login(const char *username, const char *password)
+{
+    char valid = 'F';
+    char line[256];
+    char *file_username;
+    char *file_password_hash;
+    char *saveptr; // Pour strtok_r
+    char hashed_password_hex[SHA256_DIGEST_LENGTH * 2 + 1];
+
+    // Hacher le mot de passe fourni
+    hash_password(password, hashed_password_hex);
+
+    FILE *file = fopen("./database/login.txt", "r");
+    if (file == NULL)
+    {
+        return FALSE;
+    }
+
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        // Supprime le saut de ligne à la fin si présent
+        line[strcspn(line, "\r\n")] = 0;
+
+        file_username = strtok_r(line, ";", &saveptr);
+        file_password_hash = strtok_r(NULL, ";", &saveptr);
+
+        if (file_username && file_password_hash &&
+            strcmp(username, file_username) == 0 &&
+            strcmp(hashed_password_hex, file_password_hash) == 0)
+        {
+            valid = 'T';
+            break;
+        }
+	}
+}
+
+/*int creer_configurer_sock_ecoute(uint16_t port)
 {
 	//init socket comme monter dans le cours :
 	int sock = socket(AF_INET,SOCK_STREAM,0);
@@ -259,3 +554,5 @@ void envoyer_comptine(int fd, const char *dir_name, struct catalogue *c, uint16_
 	free(buf);
 	printf("sortie avec succes\n");
 }
+
+*/

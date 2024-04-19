@@ -107,6 +107,18 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+void write_query_end(query_t * q,char * wr){
+	for(int i = 0 ; i < strlen(wr); i++){
+		if(q->size >= 1024){
+			perror("buffer overflow");
+			exit(1);
+		}
+		q->content[q->size] = wr[i];
+		q->size++;
+	}
+	return;
+}
+
 int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 {
 	//init socket comme monter dans le cours :
