@@ -24,9 +24,9 @@ Je déclare qu'il s'agit de mon propre travail. */
 
 #define RECEIVED_CLIENT 10
 
-const char PATH_USER ="";
+const char PATH_USER ="./database/users";
 
-const char PATH_CONV = "";
+const char PATH_CONV = "./database/conversations";
 
 
 typedef enum{
