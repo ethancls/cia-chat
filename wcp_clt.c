@@ -207,7 +207,7 @@ request_e convert_to_request(const char *str)
 
 void write_query_end(query_t *q, char *wr)
 {
-	for (int i = 0; i < strlen(wr); i++)
+	for (int i = 0; i < strlen(wr)  - 1; i++)
 	{
 		if (q->size >= 1024)
 		{
@@ -246,14 +246,41 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 }
 
 
-void interpreter_message(int fd)
+int interpreter_message(int fd)
 {
 
 	char content[2048];
 	int size = read_until_nl(fd,content);
-
+	printf("query received = %s",content);
 	const char * TOK = strtok(content,'//');
 	request_e r = convert_to_request(TOK);
+
+	switch (r)
+	{
+	case LOG_OK:
+		char * convs = strtok(NULL,'//');
+		char * idConv = strtok(convs,':');
+		while(idConv != NULL){
+			printf("conv : %s \n");
+			char * idConv = strtok(convs,':');
+		}
+		return 1;
+		break;
+	case LOG_FAILED:
+		printf("LOGIN FAILED\n");
+		return 0;
+		break;
+
+	case CONV:
+		while(interpreter_message(fd)!=2)continue;
+		return 2;
+		break;
+	case OKS:
+		printf("OKS RECEIVED\n");
+		return 2;
+	default:
+		break;
+	}
 }
 
 

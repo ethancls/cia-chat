@@ -237,9 +237,9 @@ void *thread_worker(void *arg)
 
 void write_query_end(query_t *q, char *wr)
 {
-	for (int i = 0; i < strlen(wr); i++)
+	for (int i = 0; i < strlen(wr) - 1; i++)
 	{
-		if (q->size >= 1024)
+		if (q->size >= 2048)
 		{
 			perror("buffer overflow");
 			exit(1);
@@ -279,6 +279,9 @@ query_t serv_construire_message(request_e inst, char *content)
 	case LOG_OK:
 
 		write_query_end(&query,"LOG_OK\\");
+		write_query_end(&query,content);
+		write_query_end(&query,"\\");
+
 		write_query_end(&query,"\n");
 
 	
@@ -318,7 +321,7 @@ int serv_inteprerte(query_t * q, masterDb_t master){
 
 
 	char *TOK = strtok(q->content, "\\");
-
+	query_t rep;
 	request_e inst = convert_to_request(TOK);
 
 	switch (inst)
@@ -331,29 +334,39 @@ int serv_inteprerte(query_t * q, masterDb_t master){
 		char *password = strtok(NULL, "\\");
 		if (validate_login(username, password) == 'F')
 		{
-			query_t rep = serv_construire_message(LOG_FAILED, NULL);
-			// envoie
+			rep = serv_construire_message(LOG_FAILED, NULL);
+			envoyer_query(socket, rep);
+			break;
 		};
 
 		int userIndex = 0;
+		int check = 0;
 		char *content = malloc(sizeof(char) * 592);
 		content[0] = '\0';
 		for (; userIndex < master->nbUser; userIndex++)
 		{
 			if (!strcmp(username, master->User[userIndex]->userID))
 			{
+				check = 1;
 				break;
 			}
+		}
+		if(!check){
+			rep = serv_construire_message(LOG_FAILED,NULL);
+			envoyer_query(socket, rep);
+			break;
+
 		}
 		for (int i = 0; i < master->User[userIndex]->nbConv; i++)
 		{
 			content = strcat(content, master->User[userIndex]->conversationID[i]);
 			content = strcat(content, ":");
 		}
-		break;
+		
 
-		query_t rep = serv_construire_message(LOG_OK,content);
-		 envoyer_query(socket, rep);
+		rep = serv_construire_message(LOG_OK,content);
+		envoyer_query(socket, rep);
+		break;
 		//envoie
 
 
@@ -390,11 +403,11 @@ int serv_inteprerte(query_t * q, masterDb_t master){
 
 
 		if(check){
-			query_t rep = serv_construire_message(OKS,NULL);
+			rep = serv_construire_message(OKS,NULL);
 			
 		}
 		else{
-			query_t rep = serv_construire_message(DENIED,NULL);
+			rep = serv_construire_message(DENIED,NULL);
 
 		}
 		envoyer_query(socket, rep);
@@ -412,11 +425,11 @@ int serv_inteprerte(query_t * q, masterDb_t master){
 		size_conv = read_until_nl(fdConv,conv,sizeof(conv));
 		while (size_conv > 1)
 		{
-			query_t rep = serv_construire_message(CONV,conv);
+			rep = serv_construire_message(CONV,conv);
 			envoyer_query(socket, rep);
 			size_conv = read_until_nl(fdConv,conv,sizeof(conv));	
 		}
-		query_t rep = serv_construire_message(OKS,conv);
+		rep = serv_construire_message(OKS,conv);
 		envoyer_query(socket, rep);
 		close(fdconv);
 		
