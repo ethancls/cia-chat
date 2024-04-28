@@ -28,9 +28,15 @@ typedef struct utilisateur
 	char *u_pseudo;
 } user_t;
 
-typedef struct conversation_
-{
-	char *c_Id; // doit etre le meme entre serveur et le client
+
+typedef struct utilisateur{
+	uint32_t u_Id;//doit etre le meme entre serveur et le client
+	char * u_pseudo;
+}user_t;
+
+typedef struct conversation_{
+	char * c_Id;//doit etre le meme entre serveur et le client
+
 	user_t c_users[30];
 	char *contenue; // contient le texte qui compose la conversation
 } convo_t;
@@ -239,6 +245,7 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 	return sock;
 }
 
+
 void interpreter_message(int fd)
 {
 
@@ -247,10 +254,9 @@ void interpreter_message(int fd)
 
 	const char * TOK = strtok(content,'//');
 	request_e r = convert_to_request(TOK);
-
-
-
 }
+
+
 
 query_t construire_message(request_e inst, char *content, convo_t *conv, user_t *user)
 {
@@ -263,46 +269,40 @@ query_t construire_message(request_e inst, char *content, convo_t *conv, user_t 
 	switch (inst)
 	{
 	case LOG:
-		write_query_end(&query, "LOG\\");
-		char *name = strtok(content, "\\");
-		char *pass = strtok(NULL, "\\");
-		// encryption
-		write_query_end(&query, name);
-		write_query_end(&query, "\\");
-		write_query_end(&query, pass);
-		write_query_end(&query, "\\");
+
+		write_query_end(&query,"LOG\\");
+		char * name = strtok(content,"\\");
+		char * pass = strtok(NULL, "\\");
+		//encryption
+		write_query_end(&query,name);
+		write_query_end(&query,"\\");
+		write_query_end(&query,pass);
+		write_query_end(&query,"\\");
+		write_query_end(&query,"\n");
+
 
 		break;
 	case SEND:
-		write_query_end(&query, "SEND\\");
-		idconvo = &(conv->c_Id); // tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
-		parser = malloc(5);
-		for (int i = 0; i < 4; i++)
-		{
-			parser[i] = idconvo[i];
-		}
-		parser[4] = '\0';
-		write_query_end(&query, parser);
-		free(parser);
-		write_query_end(&query, "\\");
-		write_query_end(&query, user->u_pseudo); // Il sera preferable d'utiliser l'id au lieu du pseudo, mais sa fera la faire pour le moment
-		write_query_end(&query, "\\");
-		write_query_end(&query, content);
-		write_query_end(&query, "\\");
+		write_query_end(&query,"SEND\\");
+		
+		write_query_end(&query,conv->c_Id);
+		
+		write_query_end(&query,"\\");
+		write_query_end(&query,user->u_pseudo);// Il sera preferable d'utiliser l'id au lieu du pseudo, mais sa fera la faire pour le moment
+		write_query_end(&query,"\\");
+		write_query_end(&query,content);
+		write_query_end(&query,"\\");
+		write_query_end(&query,"\n");
+
 
 		break;
 	case UPDATE:
-		write_query_end(&query, "UPDATE\\");
-		idconvo = &(conv->c_Id); // tres experimental sa vas peut etre changer//A FAIRE dprintf existe :(
-		parser = malloc(5);
-		for (int i = 0; i < 4; i++)
-		{
-			parser[i] = idconvo[i];
-		}
-		parser[4] = '\0';
-		write_query_end(&query, parser);
-		free(parser);
-		write_query_end(&query, "\\");
+		write_query_end(&query,"UPDATE\\");
+		write_query_end(&query,conv->c_Id);
+		write_query_end(&query,"\\");
+		write_query_end(&query,"\n");
+
+
 		break;
 	case CREATE:
 		write_query_end(&query, "CREATE\\");

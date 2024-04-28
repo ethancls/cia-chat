@@ -258,44 +258,64 @@ query_t serv_construire_message(request_e inst, char *content)
 	switch (inst)
 	{
 	case CONV:
-		write_query_end(&query, "CONV\\");
-		char *conv = strtok(content, "\\");
-		char *participant = strtok(NULL, "\\");
-		char *contenueConv = strtok(NULL, "\\");
-		// encryption
-		write_query_end(&query, conv);
-		write_query_end(&query, "\\");
-		write_query_end(&query, participant);
-		write_query_end(&query, "\\");
-		write_query_end(&query, contenueConv);
-		write_query_end(&query, "\\");
+
+		write_query_end(&query,"CONV\\");
+		//char * conv = strtok(content,"\\");
+		//char * participant = strtok(NULL,"\\");
+		char * contenueConv = strtok(NULL,"\\");
+		//encryption
+		//write_query_end(&query,conv);
+		//write_query_end(&query,"\\");
+		//write_query_end(&query,participant);
+		//write_query_end(&query,"\\");
+		write_query_end(&query,contenueConv);
+		write_query_end(&query,"\\");
+		write_query_end(&query,"\n");
+
 
 		break;
 
 		break;
 	case LOG_OK:
-		write_query_end(&query, "LOG_OK\\");
 
+		write_query_end(&query,"LOG_OK\\");
+		write_query_end(&query,"\n");
+
+	
 		break;
 	case LOG_FAILED:
-		write_query_end(&query, "LOG_FAILED\\");
+		write_query_end(&query,"LOG_FAILED\\");*
+		write_query_end(&query,"\n");
+
 		break;
 	case DENIED:
-		write_query_end(&query, "DENIED\\");
+		write_query_end(&query,"DENIED\\");
+		write_query_end(&query,"\n");
 
+	
 	case OKS:
-		write_query_end(&query, "OKS\\");
+		write_query_end(&query,"OKS\\");
+		write_query_end(&query,"\n");
+
+
 		break;
 	default:
 		printf("invalide request");
+		write_query_end(&query,"\n");
+
 		break;
 	}
 
 	return query;
 }
 
-int serv_interpreter(query_t *q, masterDb_t *master)
-{
+
+void envoyer_query(int fd, query_t * q){
+	write(fd,q->content,sizeof(char) * q->size);
+}
+
+int serv_inteprerte(query_t * q, masterDb_t master){
+
 
 	char *TOK = strtok(q->content, "\\");
 
@@ -331,8 +351,11 @@ int serv_interpreter(query_t *q, masterDb_t *master)
 			content = strcat(content, ":");
 		}
 		break;
-		query_t rep = serv_construire_message(LOG_OK, content);
-		// envoie
+
+		query_t rep = serv_construire_message(LOG_OK,content);
+		 envoyer_query(socket, rep);
+		//envoie
+
 
 	case SEND:
 		printf("@SEND\n");
@@ -365,14 +388,16 @@ int serv_interpreter(query_t *q, masterDb_t *master)
 			}
 		}
 
-		if (check)
-		{
-			serv_construire_message(OKS, NULL);
+
+		if(check){
+			query_t rep = serv_construire_message(OKS,NULL);
+			
 		}
-		else
-		{
-			serv_construire_message(DENIED, NULL);
+		else{
+			query_t rep = serv_construire_message(DENIED,NULL);
+
 		}
+		envoyer_query(socket, rep);
 
 		break;
 	case UPDATE:
@@ -381,10 +406,21 @@ int serv_interpreter(query_t *q, masterDb_t *master)
 		char filePath[256];
 		snprintf(filePath, sizeof(filePath), "%s%s.txt", PATH_CONV, convID);
 		char conv[1024];
-		int fdconv = open(filePath, O_RDONLY);
-		int size_conv = read(fdconv, convID, sizeof(convID));
+
+		int size_conv = 0;
+		int fdConv = open(filePath,RD_ONLY);
+		size_conv = read_until_nl(fdConv,conv,sizeof(conv));
+		while (size_conv > 1)
+		{
+			query_t rep = serv_construire_message(CONV,conv);
+			envoyer_query(socket, rep);
+			size_conv = read_until_nl(fdConv,conv,sizeof(conv));	
+		}
+		query_t rep = serv_construire_message(OKS,conv);
+		envoyer_query(socket, rep);
 		close(fdconv);
-		//serv_construire_message();
+		
+		
 
 	case CREATE:
 		// create conversation
@@ -401,8 +437,8 @@ int serv_interpreter(query_t *q, masterDb_t *master)
 		break;
 	}
 
-	//return query;
-	return inst;
+
+
 }
 
 int main(int argc, char *argv[])
@@ -429,24 +465,35 @@ int main(int argc, char *argv[])
 	// check si le fichier est bien dans le dossier
 	struct dirent *entry;
 	int i = 0;
-	/*while (entry == readdir(d))
-	{
-		char filePath[256];
-		snprintf(filePath, sizeof(filePath), "%s%s.txt", PATH_USER, "ethan");
-		int fd = open(filePath, O_RDONLY); // ouverture du fichier avec path
-		if (fd == NULL)
-		{
-			perror("open");
-			{
-				exit(1);
+
+	//load database
+	while(entry = readdir(d)){
+			char filePath[256];
+		 	snprintf(filePath, sizeof(filePath), "%s%s.txt",PATH_USER, user_name);
+			int fd = open(filePath,O_RDONLY);// ouverture du fichier avec path
+			if(fd == NULL){
+				perror("open");{
+					exit(1);
+				}
 			}
-		}
-		char *buffer = (char *)malloc(sizeof(char) * 32);
-		read_until_nl(fd, buffer);
-		dbd->User[i]->userID = buffer;
-		char *discard = (char *)malloc(sizeof(char) * 32);
-		read_until_nl(fd, discard);
-		free(discard);
+			char * buffer = (char *)malloc(sizeof(char) *32);
+			read_until_nl(fd,buffer);
+			dbd->Users[i]->userID = buffer;  
+			char * discard = (char *)malloc(sizeof(char) *32);
+			read_until_nl(fd,discard); 
+			free(discard);
+			
+			char ** conv = malloc(sizeof(char*) * 64);
+			for(int ic = 0; ic < 64; ic++){
+				conv[ic] = malloc(sizeof(char)*37);
+			}
+			int j = 0;
+			while(1<read_until_nl(fd,conv[j])){
+				j++;
+			}
+			dbd->Users[i]->nbConv = i;
+			i++;
+
 
 		char **conv = malloc(sizeof(char *) * 64);
 		for (int i = 0; i < 64; i++)
@@ -459,7 +506,7 @@ int main(int argc, char *argv[])
 			i++;
 		}
 		dbd->User[i]->nbConv = i;
-	}*/
+	}
 
 	while (1)
 	{
