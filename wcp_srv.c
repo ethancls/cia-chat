@@ -227,6 +227,7 @@ void *thread_worker(void *arg)
 		query_t q = {.content = {0}, .size = (uint16_t)size_query};
 		memcpy(q.content, query_content, size_query);
 		serv_interpreter(&q, args->dbd);
+		n++;
 	}
 
 	close(args->fd); // Close the client connection

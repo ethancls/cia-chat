@@ -30,7 +30,7 @@ typedef struct utilisateur
 
 typedef struct conversation_
 {
-	uint32_t c_Id; // doit etre le meme entre serveur et le client
+	char *c_Id; // doit etre le meme entre serveur et le client
 	user_t c_users[30];
 	char *contenue; // contient le texte qui compose la conversation
 } convo_t;
@@ -92,6 +92,32 @@ void envoyer_message(int fd, char *message);
 /** Affiche la comptine arrivant dans fd sur le terminal */
 void afficher_comptine(int fd);
 
+int read_until_nl(int fd, char *buf)
+{
+	int numChar = 0;
+	char *readChar = malloc(sizeof(char)); // malloc obligatoire pour pouvoir utiliser read(read ne peut pas ecrire dans le stack ?)
+	int n;
+	while ((n = read(fd, readChar, sizeof(char))) > 0)
+	{
+		*(buf + numChar) = *readChar; // on ajoute un char dans notre buffer
+		numChar++;
+		if (*readChar == '\n')
+		{							 // quand on arrive a '0' on retourne
+			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
+			return numChar;
+		}
+	}
+	if (n < 0)
+	{
+		perror("read");
+	}
+
+	// printf("Error : no \\n or read error ");
+	*buf = '\0';
+	free(readChar); // on libere notre malloc
+	return numChar;
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -141,6 +167,38 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+request_e convert_to_request(const char *str)
+{
+	if (strcmp(str, "CONV") == 0)
+	{
+		return CONV;
+	}
+	else if (strcmp(str, "USERID") == 0)
+	{
+		return USERID;
+	}
+	else if (strcmp(str, "LOG_OK") == 0)
+	{
+		return LOG_OK;
+	}
+	else if (strcmp(str, "LOG_FAILED") == 0)
+	{
+		return LOG_FAILED;
+	}
+	else if (strcmp(str, "DENIED") == 0)
+	{
+		return DENIED;
+	}
+	else if (strcmp(str, "OKS") == 0)
+	{
+		return OKS;
+	}
+	else
+	{
+		return -1; // Indicate an error or handle unknown values accordingly
+	}
+}
+
 void write_query_end(query_t *q, char *wr)
 {
 	for (int i = 0; i < strlen(wr); i++)
@@ -183,6 +241,15 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 
 void interpreter_message(int fd)
 {
+
+	char content[2048];
+	int size = read_until_nl(fd,content);
+
+	const char * TOK = strtok(content,'//');
+	request_e r = convert_to_request(TOK);
+
+
+
 }
 
 query_t construire_message(request_e inst, char *content, convo_t *conv, user_t *user)
