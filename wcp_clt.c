@@ -14,7 +14,7 @@ Je déclare qu'il s'agit de mon propre travail. */
 /* spécifique à internet */
 #include <arpa/inet.h> /* inet_pton */
 
-#define PORT_WCP 4321
+#define PORT_WCP 4321 // DEBIND PORT MACOS : sudo lsof -P -i :PORT and kill -9 <PID>
 
 typedef struct query_
 {
@@ -28,15 +28,9 @@ typedef struct utilisateur
 	char *u_pseudo;
 } user_t;
 
-
-typedef struct utilisateur{
-	uint32_t u_Id;//doit etre le meme entre serveur et le client
-	char * u_pseudo;
-}user_t;
-
-typedef struct conversation_{
-	char * c_Id;//doit etre le meme entre serveur et le client
-
+typedef struct conversation_
+{
+	char *c_Id; // doit etre le meme entre serveur et le client
 	user_t c_users[30];
 	char *contenue; // contient le texte qui compose la conversation
 } convo_t;
@@ -55,20 +49,14 @@ typedef enum
 	UPDATE,
 	CREATE,
 	ADD,
-	OKR,
-
-} request_e;
-
-typedef enum
-{
 	CONV,
 	USERID,
 	LOG_OK,
 	LOG_FAILED,
 	DENIED,
-	OKS,
+	OK,
 
-} serveur_e;
+} tokens_t;
 
 void usage(char *nom_prog)
 {
@@ -85,13 +73,15 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port);
 
 void write_query_end(query_t *q, char *wr);
 
+void envoyer_query(int fd, query_t *q);
+
 query_t nouvelle_conversation(uint32_t myId);
 
 query_t login(char *username, char *password);
 
-void interpreter_message(int fd); // bloquant
+int interpreter_message(int fd); // bloquant
 
-query_t construire_message(request_e inst, char *content, convo_t *conv, user_t *user);
+query_t construire_message(tokens_t inst, char *content, convo_t *conv, user_t *user);
 
 void envoyer_message(int fd, char *message);
 
@@ -105,13 +95,13 @@ int read_until_nl(int fd, char *buf)
 	int n;
 	while ((n = read(fd, readChar, sizeof(char))) > 0)
 	{
-		*(buf + numChar) = *readChar; // on ajoute un char dans notre buffer
-		numChar++;
 		if (*readChar == '\n')
 		{							 // quand on arrive a '0' on retourne
 			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
 			return numChar;
 		}
+		*(buf + numChar) = *readChar; // on ajoute un char dans notre buffer
+		numChar++;
 	}
 	if (n < 0)
 	{
@@ -163,17 +153,16 @@ int main(int argc, char *argv[])
 
 	printf("Connected to server IP: %s\n", ip_str);
 
-	while (1)
-	{
-		//travail
-	}
+	envoyer_message(sock, "LOG ethan a\n");
+
+	interpreter_message(sock);
 
 	close(sock);
 	printf("Program terminated without complications\n");
 	return 0;
 }
 
-request_e convert_to_request(const char *str)
+tokens_t convert_to_request(const char *str)
 {
 	if (strcmp(str, "CONV") == 0)
 	{
@@ -197,7 +186,7 @@ request_e convert_to_request(const char *str)
 	}
 	else if (strcmp(str, "OKS") == 0)
 	{
-		return OKS;
+		return OK;
 	}
 	else
 	{
@@ -207,7 +196,7 @@ request_e convert_to_request(const char *str)
 
 void write_query_end(query_t *q, char *wr)
 {
-	for (int i = 0; i < strlen(wr)  - 1; i++)
+	for (int i = 0; i < strlen(wr); i++)
 	{
 		if (q->size >= 1024)
 		{
@@ -245,47 +234,66 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 	return sock;
 }
 
-
-int interpreter_message(int fd)
+void envoyer_message(int fd, char *message)
 {
+	if (write(fd, message, strlen(message)+1) < 0)
+	{
+		perror("write");
+		close(fd);
+		exit(1);
+	}
+}
 
-	char content[2048];
-	int size = read_until_nl(fd,content);
-	printf("query received = %s",content);
-	const char * TOK = strtok(content,'//');
-	request_e r = convert_to_request(TOK);
+void envoyer_query(int fd, query_t *q)
+{
+	write(fd, q->content, sizeof(char) * q->size);
+}
+
+int interpreter_message(int fd, master_db * dbd)
+{
+	char * content = malloc(sizeof(char) * 2048);
+	int size = read_until_nl(fd, content);
+	printf("query received = %s", content);
+	char *TOK = malloc(sizeof(char) * 32);
+	char *payload = malloc(sizeof(char) * 2048);
+	sscanf(content, "%s %s", TOK, payload);
+	tokens_t r = convert_to_request(TOK);
+	printf("token = %d\n", r);
 
 	switch (r)
 	{
 	case LOG_OK:
-		char * convs = strtok(NULL,'//');
-		char * idConv = strtok(convs,':');
-		while(idConv != NULL){
-			printf("conv : %s \n");
-			char * idConv = strtok(convs,':');
+		printf("@LOGIN_OK\n");
+		char *convs = strtok(payload, ";");
+		char *idConv = strtok(NULL, ":");
+		while((convs = strtok(NULL, ";")) != NULL){
+			printf("convs = %s\n", convs);
+			idConv = strtok(NULL, ":");
+			printf("idConv = %s\n", idConv);
 		}
 		return 1;
 		break;
 	case LOG_FAILED:
-		printf("LOGIN FAILED\n");
+		printf("@LOGIN_FAILED\n");
 		return 0;
 		break;
 
 	case CONV:
-		while(interpreter_message(fd)!=2)continue;
+		printf("@CONV\n");
+		while (interpreter_message(fd) != 2)
+			continue;
 		return 2;
 		break;
-	case OKS:
-		printf("OKS RECEIVED\n");
+	case OK:
+		printf("@OK_RECEIVED\n");
 		return 2;
 	default:
+		return -1;
 		break;
 	}
 }
 
-
-
-query_t construire_message(request_e inst, char *content, convo_t *conv, user_t *user)
+query_t construire_message(tokens_t inst, char *content, convo_t *conv, user_t *user)
 {
 
 	query_t query;
@@ -297,38 +305,35 @@ query_t construire_message(request_e inst, char *content, convo_t *conv, user_t 
 	{
 	case LOG:
 
-		write_query_end(&query,"LOG\\");
-		char * name = strtok(content,"\\");
-		char * pass = strtok(NULL, "\\");
-		//encryption
-		write_query_end(&query,name);
-		write_query_end(&query,"\\");
-		write_query_end(&query,pass);
-		write_query_end(&query,"\\");
-		write_query_end(&query,"\n");
-
+		write_query_end(&query, "LOG\\");
+		char *name = strtok(content, "\\");
+		char *pass = strtok(NULL, "\\");
+		// encryption
+		write_query_end(&query, name);
+		write_query_end(&query, "\\");
+		write_query_end(&query, pass);
+		write_query_end(&query, "\\");
+		write_query_end(&query, "\n");
 
 		break;
 	case SEND:
-		write_query_end(&query,"SEND\\");
-		
-		write_query_end(&query,conv->c_Id);
-		
-		write_query_end(&query,"\\");
-		write_query_end(&query,user->u_pseudo);// Il sera preferable d'utiliser l'id au lieu du pseudo, mais sa fera la faire pour le moment
-		write_query_end(&query,"\\");
-		write_query_end(&query,content);
-		write_query_end(&query,"\\");
-		write_query_end(&query,"\n");
+		write_query_end(&query, "SEND\\");
 
+		write_query_end(&query, conv->c_Id);
+
+		write_query_end(&query, "\\");
+		write_query_end(&query, user->u_pseudo); // Il sera preferable d'utiliser l'id au lieu du pseudo, mais sa fera la faire pour le moment
+		write_query_end(&query, "\\");
+		write_query_end(&query, content);
+		write_query_end(&query, "\\");
+		write_query_end(&query, "\n");
 
 		break;
 	case UPDATE:
-		write_query_end(&query,"UPDATE\\");
-		write_query_end(&query,conv->c_Id);
-		write_query_end(&query,"\\");
-		write_query_end(&query,"\n");
-
+		write_query_end(&query, "UPDATE\\");
+		write_query_end(&query, conv->c_Id);
+		write_query_end(&query, "\\");
+		write_query_end(&query, "\n");
 
 		break;
 	case CREATE:
@@ -349,11 +354,11 @@ query_t construire_message(request_e inst, char *content, convo_t *conv, user_t 
 		write_query_end(&query, nom);
 		write_query_end(&query, "\\");
 		break;
-	case OKR:
+	case OK:
 		write_query_end(&query, "OK\\");
 		break;
 	default:
-		printf("invalide request");
+		printf("invalid request");
 		break;
 	}
 
