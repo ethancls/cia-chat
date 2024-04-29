@@ -35,7 +35,7 @@ const char *PATH_USER = "./database/users";
 
 const char *PATH_CONV = "./database/conversations";
 
-typedef enum
+typedef enum request
 {
 	LOG,
 	SEND,
@@ -52,7 +52,7 @@ typedef enum
 	USERID,
 	LOG_OK,
 	LOG_FAILED,
-	SENDING_TRAFFIC
+	SENDING_TRAFFIC,
 	DENIED,
 	OKS,
 
