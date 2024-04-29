@@ -55,6 +55,7 @@ typedef enum
 	LOG_FAILED,
 	DENIED,
 	OK,
+	SENDING_TRAFFIC,
 
 } tokens_t;
 
@@ -93,9 +94,14 @@ int read_until_nl(int fd, char *buf)
 	int numChar = 0;
 	char *readChar = malloc(sizeof(char)); // malloc obligatoire pour pouvoir utiliser read(read ne peut pas ecrire dans le stack ?)
 	int n;
+	int dansguillemet = 0;
 	while ((n = read(fd, readChar, sizeof(char))) > 0)
 	{
-		if (*readChar == '\n')
+		if(readChar == '\"'){
+			dansguillemet = !dansguillemet; //ignorer les \n si dans les guillemets
+		}
+
+		if (*readChar == '\n' && !dansguillemet)
 		{							 // quand on arrive a '0' on retourne
 			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
 			return numChar;
@@ -188,6 +194,10 @@ tokens_t convert_to_request(const char *str)
 	{
 		return OK;
 	}
+		else if (strcmp(str, "SENDING_TRAFFIC") == 0)
+	{
+		return SENDING_TRAFFIC;
+	}
 	else
 	{
 		return -1; // Indicate an error or handle unknown values accordingly
@@ -254,9 +264,10 @@ int interpreter_message(int fd, master_db * dbd)
 	char * content = malloc(sizeof(char) * 2048);
 	int size = read_until_nl(fd, content);
 	printf("query received = %s", content);
-	char *TOK = malloc(sizeof(char) * 32);
+	char *TOK = malloc(sizeof(char) * 16);
+	char * info = malloc(sizeof(char) * 48);
 	char *payload = malloc(sizeof(char) * 2048);
-	sscanf(content, "%s %s", TOK, payload);
+	sscanf(content, "%s %s %s", TOK,info, payload);
 	tokens_t r = convert_to_request(TOK);
 	printf("token = %d\n", r);
 
@@ -277,7 +288,11 @@ int interpreter_message(int fd, master_db * dbd)
 		printf("@LOGIN_FAILED\n");
 		return 0;
 		break;
-
+	case SENDING_TRAFFIC:
+		int size_buffer = atoi(info);
+		char * data = malloc(size_buffer);
+		read_until_nl(fd,data);
+		printf("%s\n",data);
 	case CONV:
 		printf("@CONV\n");
 		while (interpreter_message(fd) != 2)
@@ -300,6 +315,8 @@ query_t construire_message(tokens_t inst, char *content, convo_t *conv, user_t *
 	char *parser;
 	char *idconvo;
 	char *nom;
+
+	//TODO : REFAIRE LE PROTOCOLE COTER CLIENT
 
 	switch (inst)
 	{

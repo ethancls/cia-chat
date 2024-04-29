@@ -52,6 +52,7 @@ typedef enum
 	USERID,
 	LOG_OK,
 	LOG_FAILED,
+	SENDING_TRAFFIC
 	DENIED,
 	OKS,
 
@@ -132,9 +133,14 @@ int read_until_nl(int fd, char *buf)
 	int numChar = 0;
 	char *readChar = malloc(sizeof(char)); // malloc obligatoire pour pouvoir utiliser read(read ne peut pas ecrire dans le stack ?)
 	int n;
+	int dansguillemet = 0;
 	while ((n = read(fd, readChar, sizeof(char))) > 0)
-	{
-		if (*readChar == '\n')
+	{	
+		if(readChar == '\"'){
+			dansguillemet = !dansguillemet; //ignorer les \n si dans les guillemets
+		}
+
+		if (*readChar == '\n' && !dansguillemet)
 		{							 // quand on arrive a '0' on retourne
 			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
 			return numChar;
@@ -255,7 +261,7 @@ void write_query_end(query_t *q, char *wr)
 	return;
 }
 
-query_t serv_construire_message(serveur_e inst, char *content)
+query_t serv_construire_message(serveur_e inst,char * User, char *content,int size)
 {
 
 	query_t query;
@@ -264,17 +270,18 @@ query_t serv_construire_message(serveur_e inst, char *content)
 	{
 	case CONV:
 
-		write_query_end(&query, "CONV\\");
+		write_query_end(&query, "CONV ");
 		// char * conv = strtok(content,"\\");
 		// char * participant = strtok(NULL,"\\");
-		char *contenueConv = strtok(NULL, "\\");
+		//char *contenueConv = strtok(NULL, "\\");
 		// encryption
 		// write_query_end(&query,conv);
 		// write_query_end(&query,"\\");
 		// write_query_end(&query,participant);
 		// write_query_end(&query,"\\");
-		write_query_end(&query, contenueConv);
-		write_query_end(&query, "\\");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query,content);
 		write_query_end(&query, "\n");
 
 		break;
@@ -283,22 +290,45 @@ query_t serv_construire_message(serveur_e inst, char *content)
 	case LOG_OK:
 
 		write_query_end(&query, "LOG_OK  ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, " \\\n");
 
 
 		break;
 	case LOG_FAILED:
-		write_query_end(&query, "LOG_FAILED\\");
+		write_query_end(&query, "LOG_FAILED ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
 
 		break;
 	case DENIED:
-		write_query_end(&query, "DENIED\\");
+		write_query_end(&query, "DENIED ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
 
 	case OKS:
-		write_query_end(&query, "OKS\\");
+		write_query_end(&query, "OKS ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query, "\n");
+
+		break;
+	case SENDING_TRAFFIC:
+		write_query_end(&query, "SENDING_TRAFFIC ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
+		write_query_end(&query,User);
+		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
 
 		break;
@@ -339,7 +369,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		if (!validate_login(username, payload))
 		{
 			printf("login failed\n");
-			rep = serv_construire_message(LOG_FAILED, NULL);
+			rep = serv_construire_message(LOG_FAILED, NULL,0);
 			envoyer_query(socket, &rep);
 			break;
 		}
@@ -359,7 +389,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		}
 		if (!check)
 		{
-			rep = serv_construire_message(LOG_FAILED, NULL);
+			rep = serv_construire_message(LOG_FAILED,username, NULL,0);
 			envoyer_query(socket, &rep);
 			break;
 		}
@@ -369,13 +399,12 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 			content = strcat(content, ":");
 		}
 		printf("content : %s\n", content);
-		rep = serv_construire_message(LOG_OK, content);
+		rep = serv_construire_message(LOG_OK,username, content,0);
 		envoyer_query(socket, &rep);
 		break;
 
 	case SEND:
 		printf("@SEND\n");
-		username = strtok(NULL, "\\");
 		UserData_t **tabUser = master->User;
 		size_t size = master->nbUser;
 		check = 0;
@@ -384,13 +413,13 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		{
 			if (strcmp(username, tabUser[i]->userID))
 			{
-				char *conv = strtok(NULL, "\\");
+				char *conv = strtok(content, ":");
 				for (int j = 0; j < tabUser[i]->nbConv; i++)
 				{
 					if (!strcmp(conv, tabUser[i]->conversationID[j]))
 					{
 						check = 1;
-						char *message = strtok(NULL, "\\");
+						char *message = strtok(NULL, ":");
 						char filePath[256];
 						snprintf(filePath, sizeof(filePath), "%s%s.txt", PATH_CONV, conv);
 						// sem_wait
@@ -406,33 +435,41 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 
 		if (check)
 		{
-			rep = serv_construire_message(OKS, NULL);
+			rep = serv_construire_message(OKS,username, NULL,0);
 		}
 		else
 		{
-			rep = serv_construire_message(DENIED, NULL);
+			rep = serv_construire_message(DENIED,username, NULL,0);
 		}
 		envoyer_query(socket, &rep);
 
 		break;
 	case UPDATE:
 		printf("@UPDATE\n");
-		char *convID = strtok(NULL, "\\");
-		char filePath[256];
-		snprintf(filePath, sizeof(filePath), "%s%s.txt", PATH_CONV, convID);
-		char conv[1024];
 
-		int size_conv = 0;
+		char * sendtext = malloc(sizeof(char) * (sz + 3));//+2 pour guillemet 
+		char * size = malloc(4);
+		char * rawtext = malloc(sizeof(char) * sz);
+		int sz = 0;
+		char filePath[256];
+
+		snprintf(filePath, sizeof(filePath), "%s%s.txt", PATH_CONV, content);
+		
 		int fdconv = open(filePath, O_RDONLY);
-		size_conv = read_until_nl(fdconv, conv);
-		while (size_conv > 1)
-		{
-			rep = serv_construire_message(CONV, conv);
-			envoyer_query(socket, &rep);
-			size_conv = read_until_nl(fdconv, conv);
-		}
-		rep = serv_construire_message(OKS, conv);
+		//taille de la discusion
+		fseek(fdconv, 0L, SEEK_END);
+		sz = ftell(fdconv);
+		rewind(fdconv);
+		char * rawtext = malloc(sizeof(char) * sz);
+		read(fdconv,rawtext,sz);
+		
+		sprintf(size,"%d",sz);
+		snprintf(sendtext,"\"%s\"\n",size,rawtext);
+
+
+		rep = serv_construire_message(SENDING_TRAFFIC,size,NULL);//envoie taille
 		envoyer_query(socket, &rep);
+		write(socket,sendtext,sz);//envoie du text de la conv
 		close(fdconv);
 
 	case CREATE:
