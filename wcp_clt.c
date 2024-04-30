@@ -18,7 +18,7 @@ Je déclare qu'il s'agit de mon propre travail. */
 
 typedef struct query
 {
-	char content[2048]; // taille temporaire
+	char *content; // taille temporaire
 	uint16_t size;
 } query_t;
 
@@ -62,7 +62,7 @@ typedef enum tokens
 void usage(char *nom_prog)
 {
 	fprintf(stderr, "Usage: %s addr_ipv4\n"
-					"client pour WCP (Wikicomptine Protocol)\n"
+					"client pour TCP\n"
 					"Exemple: %s 208.97.177.124\n",
 			nom_prog, nom_prog);
 }
@@ -82,12 +82,9 @@ query_t login(char *username, char *password);
 
 int interpreter_message(int fd); // bloquant
 
-query_t construire_message(tokens_t inst, char *content, convo_t *conv, user_t *user);
+query_t construire_message(tokens_t inst, char *username, char *content);
 
 void envoyer_message(int fd, char *message);
-
-/** Affiche la comptine arrivant dans fd sur le terminal */
-void afficher_comptine(int fd);
 
 int read_until_nl(int fd, char *buf)
 {
@@ -97,8 +94,9 @@ int read_until_nl(int fd, char *buf)
 	int dansguillemet = 0;
 	while ((n = read(fd, readChar, sizeof(char))) > 0)
 	{
-		if(*readChar == '\"'){
-			dansguillemet = !dansguillemet; //ignorer les \n si dans les guillemets
+		if (*readChar == '\"')
+		{
+			dansguillemet = !dansguillemet; // ignorer les \n si dans les guillemets
 		}
 
 		if (*readChar == '\n' && !dansguillemet)
@@ -159,8 +157,26 @@ int main(int argc, char *argv[])
 
 	printf("Connected to server IP: %s\n", ip_str);
 
-	envoyer_message(sock, "LOG ethan a\n");
-
+	query_t q;
+	q = construire_message(SIGNIN, "admin", "123");
+	envoyer_query(sock, &q);
+	interpreter_message(sock);
+	q = construire_message(CREATE, "allseing", "admin:dave:ethan:jesse:maverick:neji:");
+	envoyer_query(sock, &q);
+/*	char *message = "Hello World !\n";
+	char *convers = "bkJB4iMLlufosedz3buGeeSxPW7Ma1xCFN9t";
+	char *size_message = malloc(sizeof(char) * 4);
+	char *m = malloc(sizeof(char) * 128);
+	sprintf(size_message, "%d", (int)strlen(message));
+	snprintf(m, 132, "%s:%s:", convers, size_message);
+	q = construire_message(SEND, "ethan", m);
+	envoyer_query(sock, &q);
+	write(sock, message, strlen(message));
+	interpreter_message(sock);
+	free(size_message);
+	free(m);*/
+	q = construire_message(LOG, "admin", "123");
+	envoyer_query(sock, &q);
 	interpreter_message(sock);
 
 	close(sock);
@@ -190,17 +206,17 @@ tokens_t convert_to_request(const char *str)
 	{
 		return DENIED;
 	}
-	else if (strcmp(str, "OKS") == 0)
+	else if (strcmp(str, "OK") == 0)
 	{
 		return OK;
 	}
-		else if (strcmp(str, "SENDING_TRAFFIC") == 0)
+	else if (strcmp(str, "SENDING_TRAFFIC") == 0)
 	{
 		return SENDING_TRAFFIC;
 	}
 	else
 	{
-		return -1; // Indicate an error or handle unknown values accordingly
+		return -1;
 	}
 }
 
@@ -246,7 +262,7 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 
 void envoyer_message(int fd, char *message)
 {
-	if (write(fd, message, strlen(message)+1) < 0)
+	if (write(fd, message, strlen(message) + 1) < 0) // +1 pour le \0 ??
 	{
 		perror("write");
 		close(fd);
@@ -261,13 +277,13 @@ void envoyer_query(int fd, query_t *q)
 
 int interpreter_message(int fd)
 {
-	char * content = malloc(sizeof(char) * 2048);
+	char *content = malloc(sizeof(char) * 2048);
 	int size = read_until_nl(fd, content);
 	printf("query received = %s", content);
-	char * TOK = malloc(sizeof(char) * 16);
-	char * info = malloc(sizeof(char) * 48);
-	char * payload = malloc(sizeof(char) * 2048);
-	sscanf(content, "%s %s %s", TOK,info, payload);
+	char *TOK = malloc(sizeof(char) * 16);
+	char *info = malloc(sizeof(char) * 48);
+	char *payload = malloc(sizeof(char) * 2048);
+	sscanf(content, "%s %s %s", TOK, info, payload);
 	tokens_t r = convert_to_request(TOK);
 	printf("token = %d\n", r);
 
@@ -277,7 +293,8 @@ int interpreter_message(int fd)
 		printf("@LOGIN_OK\n");
 		char *convs = strtok(payload, ";");
 		char *idConv = strtok(NULL, ":");
-		while((convs = strtok(NULL, ";")) != NULL){
+		while ((convs = strtok(NULL, ";")) != NULL)
+		{
 			printf("convs = %s\n", convs);
 			idConv = strtok(NULL, ":");
 			printf("idConv = %s\n", idConv);
@@ -289,10 +306,13 @@ int interpreter_message(int fd)
 		return 0;
 		break;
 	case SENDING_TRAFFIC:
+		printf("@SENDING_TRAFFIC\n");
 		int size_buffer = atoi(info);
-		char * data = malloc(size_buffer);
-		read_until_nl(fd,data);
-		printf("%s\n",data);
+		printf("size_buffer = %d\n", size_buffer);
+		char *data = malloc(size_buffer);
+		read(fd, data, size_buffer);
+		printf("%s\n", data);
+		break;
 	case CONV:
 		printf("@CONV\n");
 		while (interpreter_message(fd) != 2)
@@ -306,78 +326,61 @@ int interpreter_message(int fd)
 		return -1;
 		break;
 	}
+	return 0;
 }
 
-query_t construire_message(tokens_t inst, char *content, convo_t *conv, user_t *user)
+query_t construire_message(tokens_t inst, char *username, char *content)
 {
 
 	query_t query;
-	char *parser;
-	char *idconvo;
-	char *nom;
+	query.size = 0;
+	query.content = malloc(sizeof(char) * 2048);
+	char *user_id;
+	char *payload;
 
-	//TODO : REFAIRE LE PROTOCOLE COTER CLIENT
+	// TODO : REFAIRE LE PROTOCOLE COTER CLIENT
 
 	switch (inst)
 	{
-	case LOG:
+	case LOG: // LOG <username> <password>
 
-		write_query_end(&query, "LOG\\");
-		char *name = strtok(content, "\\");
-		char *pass = strtok(NULL, "\\");
-		// encryption
-		write_query_end(&query, name);
-		write_query_end(&query, "\\");
-		write_query_end(&query, pass);
-		write_query_end(&query, "\\");
-		write_query_end(&query, "\n");
+		write_query_end(&query, "LOG ");
+		// char *name = strtok(content, "\\");
+		// char *pass = strtok(NULL, "\\");
+		//  encryption
 
 		break;
-	case SEND:
-		write_query_end(&query, "SEND\\");
+	case SEND: // SEND <username> <numCOnv:size>
+		write_query_end(&query, "SEND ");
 
-		write_query_end(&query, conv->c_Id);
-
-		write_query_end(&query, "\\");
-		write_query_end(&query, user->u_pseudo); // Il sera preferable d'utiliser l'id au lieu du pseudo, mais sa fera la faire pour le moment
-		write_query_end(&query, "\\");
-		write_query_end(&query, content);
-		write_query_end(&query, "\\");
-		write_query_end(&query, "\n");
+	case SIGNIN: // SIGNIN <username> <password>
+		write_query_end(&query, "SIGNIN ");
+		break;
+	case UPDATE: // UPDATE <username> <numCOnv>
+		write_query_end(&query, "UPDATE ");
 
 		break;
-	case UPDATE:
-		write_query_end(&query, "UPDATE\\");
-		write_query_end(&query, conv->c_Id);
-		write_query_end(&query, "\\");
-		write_query_end(&query, "\n");
+	case CREATE: // CREATE <NomCOnv> <nomPartipant:...:nom>
+		write_query_end(&query, "CREATE ");
+		break;
+	case ADD: // ADD <USerAjouter> <IdCOnv>
+		write_query_end(&query, "ADD ");
 
 		break;
-	case CREATE:
-		write_query_end(&query, "CREATE\\");
-
-		nom = strtok(content, "\\");
-		write_query_end(&query, nom);
-		write_query_end(&query, "\\");
-		while ((nom = strtok(content, "\\")) != NULL)
-		{
-			write_query_end(&query, nom);
-			write_query_end(&query, "\\");
-		}
-		break;
-	case ADD:
-		write_query_end(&query, "ADD\\");
-		nom = strtok(content, "\\");
-		write_query_end(&query, nom);
-		write_query_end(&query, "\\");
-		break;
-	case OK:
-		write_query_end(&query, "OK\\");
+	case OK: // OK <info>
+		write_query_end(&query, "OK ");
 		break;
 	default:
 		printf("invalid request");
+		query.size = 0;
+		return query;
 		break;
 	}
+
+	write_query_end(&query, username);
+	write_query_end(&query, " ");
+	write_query_end(&query, content);
+	write_query_end(&query, "\n");
 
 	return query;
 }
