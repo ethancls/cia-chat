@@ -16,7 +16,7 @@ Je déclare qu'il s'agit de mon propre travail. */
 
 #define PORT_WCP 4321 // DEBIND PORT MACOS : sudo lsof -P -i :PORT and kill -9 <PID>
 
-typedef struct query_
+typedef struct query
 {
 	char content[2048]; // taille temporaire
 	uint16_t size;
@@ -28,7 +28,7 @@ typedef struct utilisateur
 	char *u_pseudo;
 } user_t;
 
-typedef struct conversation_
+typedef struct conversation
 {
 	char *c_Id; // doit etre le meme entre serveur et le client
 	user_t c_users[30];
@@ -41,7 +41,7 @@ typedef struct feed
 	uint32_t f_nbConv;
 } feed_t;
 
-typedef enum
+typedef enum tokens
 {
 	LOG,
 	SIGNIN, // A faire
@@ -97,7 +97,7 @@ int read_until_nl(int fd, char *buf)
 	int dansguillemet = 0;
 	while ((n = read(fd, readChar, sizeof(char))) > 0)
 	{
-		if(readChar == '\"'){
+		if(*readChar == '\"'){
 			dansguillemet = !dansguillemet; //ignorer les \n si dans les guillemets
 		}
 
@@ -259,14 +259,14 @@ void envoyer_query(int fd, query_t *q)
 	write(fd, q->content, sizeof(char) * q->size);
 }
 
-int interpreter_message(int fd, master_db * dbd)
+int interpreter_message(int fd)
 {
 	char * content = malloc(sizeof(char) * 2048);
 	int size = read_until_nl(fd, content);
 	printf("query received = %s", content);
-	char *TOK = malloc(sizeof(char) * 16);
+	char * TOK = malloc(sizeof(char) * 16);
 	char * info = malloc(sizeof(char) * 48);
-	char *payload = malloc(sizeof(char) * 2048);
+	char * payload = malloc(sizeof(char) * 2048);
 	sscanf(content, "%s %s %s", TOK,info, payload);
 	tokens_t r = convert_to_request(TOK);
 	printf("token = %d\n", r);
