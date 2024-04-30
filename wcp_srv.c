@@ -718,16 +718,24 @@ int main(int argc, char *argv[])
 	sem_t sem;
 	sem_init(&sem, 0, 1);
 	printf("Serveur TCP\n");
-	masterDb_t *dbd;
+	masterDb_t *dbd = malloc(sizeof(masterDb_t));
+	dbd->nbUser = 0;
 	dbd->User = malloc(sizeof(UserData_t *) * 128);
+	if (dbd->User == NULL) {
+		// Gestion de l'erreur d'allocation de mémoire
+		exit(EXIT_FAILURE);
+	}
 	for (int i = 0; i < 128; i++)
 	{
 		dbd->User[i] = malloc(sizeof(UserData_t));
+		if (dbd->User[i] == NULL) {
+			// Gestion de l'erreur d'allocation de mémoire
+			exit(EXIT_FAILURE);
+		}
 	}
+
 	int kill = 0;
-
 	int sock = creer_configurer_sock_ecoute(PORT_WCP); // creation socket listen
-
 	reload_database(dbd);
 
 	while (1)
