@@ -15,6 +15,8 @@ Je déclare qu'il s'agit de mon propre travail. */
 #include <arpa/inet.h> /* inet_pton */
 
 #define PORT_WCP 4321 // DEBIND PORT MACOS : sudo lsof -P -i :PORT and kill -9 <PID>
+#define CONTENT_MAX_SIZE 64
+#define CONTENT_MAX_NB 32
 
 typedef struct query
 {
@@ -22,17 +24,12 @@ typedef struct query
 	uint16_t size;
 } query_t;
 
-typedef struct utilisateur
-{
-	uint32_t u_Id; // doit etre le meme entre serveur et le client
-	char *u_pseudo;
-} user_t;
+
 
 typedef struct conversation
 {
-	char *c_Id; // doit etre le meme entre serveur et le client
-	user_t c_users[30];
-	char *contenue; // contient le texte qui compose la conversation
+	char *nom; // doit etre le meme entre serveur et le client
+	char *id_deconv; // contient le texte qui compose la conversation
 } convo_t;
 
 typedef struct feed
@@ -40,6 +37,15 @@ typedef struct feed
 	convo_t f_conv[1024];
 	uint32_t f_nbConv;
 } feed_t;
+
+typedef struct utilisateur
+{
+	// doit etre le meme entre serveur et le client
+	char *u_pseudo;
+	char * password;
+	convo_t ** conversation;
+	int nb_conv;
+} user_t;
 
 typedef enum tokens
 {
@@ -80,7 +86,7 @@ query_t nouvelle_conversation(uint32_t myId);
 
 query_t login(char *username, char *password);
 
-int interpreter_message(int fd); // bloquant
+int interpreter_message(int fd,char ** data); // bloquant
 
 query_t construire_message(tokens_t inst, char *username, char *content);
 
@@ -118,6 +124,156 @@ int read_until_nl(int fd, char *buf)
 	return numChar;
 }
 
+void envoyerMessage(user_t * u,int sock,char ** content){
+	int choix = 0;
+	printf("\n choissez une conversation : \n");
+	for(int i = 0; i < u->nb_conv;i++){
+		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
+	}
+	printf("choix : ");
+	scanf("%d", &choix);
+	if(choix >= u->nb_conv || choix <0){
+		printf("\n inavlide conv number : returning to menu\n");
+		return;
+	}
+	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
+	printf("\nmessage : ");
+	char * message = malloc(1024);
+	char * sizem = malloc(5);
+	char * payload = malloc(1032);
+	read_until_nl(STDIN_FILENO,message);
+	printf("you typed : %s\n",message);
+	sprintf(sizem,"%d",(int)strlen(message));
+	snprintf(payload,1032,"%s:%s:",u->conversation[choix]->id_deconv,sizem);
+	printf("payload : %s\n",payload);
+	free(sizem);
+	query_t q;
+	q = construire_message(SEND,u->u_pseudo,payload);
+	
+	envoyer_query(sock,&q);
+	write(sock,message,(int)strlen(message));
+	
+	free(message);
+	free(payload);
+
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("Serveur had a problem : message ignored \n");
+		return;
+	}
+	printf("Serveur : ACK, message saved on serveur : %s\n",content[0]);
+	return;
+
+}
+ 
+void voirConversation(user_t * u, int sock,char ** content){
+	int choix = 0;
+	printf("\n choissez une conversation : \n");
+	for(int i = 0; i < u->nb_conv;i++){
+		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
+	}
+	printf("choix : ");
+	scanf("%d", &choix);
+	if(choix >= u->nb_conv || choix <0){
+		printf("\n inavlide conv number : returning to menu\n");
+		return;
+	}
+	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
+	query_t q;
+	q = construire_message(UPDATE,u->u_pseudo,u->conversation[choix]->id_deconv);
+	envoyer_query(sock,&q);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("failed to get reponse : maybe convo doesnt exist? \n");
+		return;
+	}
+	printf("contenue conv :\n*****************************************************************************\n\n%s\n",content[0]);
+	printf("press any key to get back to menu");
+	char dis;
+	scanf("%c",&dis);
+	return;
+}
+
+void creerConversation(user_t * u, int sock,char ** content){
+	printf("nom nouvelle convo : ");
+	char nom[32];
+	scanf("%31s",nom);
+	printf("participant ( format nomPar1:nomPar2:...:nomParn:)  : ");
+	char participant[1026];
+	scanf("%1000s",participant);
+	snprintf(participant,1026,"%s:%s:",participant,u->u_pseudo);
+	query_t q;
+	q = construire_message(CREATE,nom,participant);
+	envoyer_query(sock,&q);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("failed to create : %s\n",content[0]);
+		return;
+	}
+	printf("success created conversation : %s", content[0]);
+
+}
+ 
+void miseAJourServeur(user_t * user, int sock,char ** content){
+	query_t q;
+	q = construire_message(LOG,user->u_pseudo,user->password); 
+	envoyer_query(sock,&q);
+	int reponse = interpreter_message(sock,content);
+	
+	if(reponse == -1){
+		printf("failed to update : mauvais nom utilisateur");
+		return;
+	}
+	for(int i = 0; i < CONTENT_MAX_NB; i++){
+		if(content[i] == NULL){
+			user->nb_conv = i;
+			break;
+		}
+		strcpy(user->conversation[i]->id_deconv, content[i]);
+		sprintf(user->conversation[i]->nom,"%d",i);
+	}
+	printf("convo loaded\n");
+	printf("\n***********************STATE UPDATED***********************************\n");
+	return;
+}
+
+void menu(user_t * u,int sock,char ** content) {
+    int choix;
+
+    do {
+		
+        printf("\nMenu :\n");
+        printf("1. Envoyer un message\n");
+        printf("2. Voir la conversation\n");
+        printf("3. Créer une conversation\n");
+        printf("4. Mettre à jour le serveur\n");
+        printf("0. Quitter\n");
+        printf("Choisissez une option : ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1:
+                envoyerMessage(u,sock,content);
+                break;
+            case 2:
+                voirConversation(u,sock,content);
+                break;
+            case 3:
+                creerConversation(u,sock,content);
+                break;
+            case 4:
+                miseAJourServeur(u,sock,content);
+                break;
+            case 0:
+                printf("Au revoir !\n");
+                break;
+            default:
+                printf("Option invalide. Veuillez réessayer.\n");
+        }
+    } while (choix != 0);
+}
+
+
 int main(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -154,31 +310,78 @@ int main(int argc, char *argv[])
 		close(sock);
 		return 1;
 	}
-
+	int reponse = 0;
+	user_t * user = malloc(sizeof(user_t));
+	user->conversation = malloc(sizeof(convo_t*) *CONTENT_MAX_NB);
+	for(int i =0; i < CONTENT_MAX_NB; i++){
+		user->conversation[i] = malloc(sizeof(convo_t));
+		user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
+		user->conversation[i]->nom = malloc(5);
+	}
+	query_t * q = malloc(sizeof(query_t));
+	char ** dataBuffer = malloc(sizeof(char*) * CONTENT_MAX_NB);
+	//for(int i =0; i < CONTENT_MAX_NB; i++){
+	//	dataBuffer[i] = malloc(CONTENT_MAX_SIZE);
+	//}
 	printf("Connected to server IP: %s\n", ip_str);
+	printf("Se connecter : 1\nCreer un compte : 2\n");
+	int sc = 0;
+	scanf("%d",&sc);
+	char * nom = malloc(32);
+	char * mdp = malloc(32);
+	if(sc == 2){
+		printf("********************NOUVELLE UTILISATEUR****************************\n");
+		printf("taper nom utilisateur et mdp :\n");
+		printf("nom : ");
+	
+		scanf("%s",nom); 
+		printf("\n");
+		printf("mdp : ");
+		scanf("%s",mdp);
+		*q = construire_message(SIGNIN,nom,mdp);
+		envoyer_query(sock,q);
+		reponse = interpreter_message(sock,dataBuffer);
+		if(reponse == -1){
+			printf("n'a pas pu creer l'utilisateur\n");
+		}
+	}
+	printf("taper nom utilisateur et mdp :\n");
+	printf("nom : ");
+	
+	scanf("%s",nom); 
+	printf("\n");
+	printf("mdp : ");
+	scanf("%s",mdp);
+	printf("\n");
+	user->u_pseudo = nom;
+	user->password = mdp;
+	printf("user : %s , mdp : %s\n",user->u_pseudo,user->password);
 
-	query_t q;
-	q = construire_message(SIGNIN, "admin", "123");
-	envoyer_query(sock, &q);
-	interpreter_message(sock);
-	q = construire_message(CREATE, "allseing", "admin:dave:ethan:jesse:maverick:neji:");
-	envoyer_query(sock, &q);
-/*	char *message = "Hello World !\n";
-	char *convers = "bkJB4iMLlufosedz3buGeeSxPW7Ma1xCFN9t";
-	char *size_message = malloc(sizeof(char) * 4);
-	char *m = malloc(sizeof(char) * 128);
-	sprintf(size_message, "%d", (int)strlen(message));
-	snprintf(m, 132, "%s:%s:", convers, size_message);
-	q = construire_message(SEND, "ethan", m);
-	envoyer_query(sock, &q);
-	write(sock, message, strlen(message));
-	interpreter_message(sock);
-	free(size_message);
-	free(m);*/
-	q = construire_message(LOG, "admin", "123");
-	envoyer_query(sock, &q);
-	interpreter_message(sock);
+	*q = construire_message(LOG,user->u_pseudo,user->password); 
+	envoyer_query(sock,q);
+	reponse = interpreter_message(sock,dataBuffer);
+	if(reponse == -1){
+		printf("mauvais nom utilisateur\n");
+		close(sock);
+		exit(0);
+	}
+	printf("*************************LOADING DATA***************************************\n");
+	for(int i = 0; i < CONTENT_MAX_NB; i++){
+		if(dataBuffer[i] == NULL){
+			user->nb_conv = i;
+			break;
+		}
+		printf("data %d: %s \n",i,dataBuffer[i]);
+		//user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
+        strcpy(user->conversation[i]->id_deconv, dataBuffer[i]);
+		printf("data loades in conversation %d: %s \n",i,user->conversation[i]->id_deconv);
+		sprintf(user->conversation[i]->nom,"%d",i);
+	}
 
+	printf("convo loaded");
+
+	menu(user,sock,dataBuffer);
+	
 	close(sock);
 	printf("Program terminated without complications\n");
 	return 0;
@@ -275,7 +478,7 @@ void envoyer_query(int fd, query_t *q)
 	write(fd, q->content, sizeof(char) * q->size);
 }
 
-int interpreter_message(int fd)
+int interpreter_message(int fd,char ** dataRet)
 {
 	char *content = malloc(sizeof(char) * 2048);
 	int size = read_until_nl(fd, content);
@@ -291,19 +494,26 @@ int interpreter_message(int fd)
 	{
 	case LOG_OK:
 		printf("@LOGIN_OK\n");
-		char *convs = strtok(payload, ";");
-		char *idConv = strtok(NULL, ":");
-		while ((convs = strtok(NULL, ";")) != NULL)
+		
+		char *idConv = strtok(payload, ":");
+		printf("1ER conv = %s\n",idConv);
+		int indexConv = 0;
+		dataRet[indexConv] = idConv;
+		while ((idConv = strtok(NULL, ":")) != NULL)
 		{
-			printf("convs = %s\n", convs);
-			idConv = strtok(NULL, ":");
+			indexConv++;
 			printf("idConv = %s\n", idConv);
+			dataRet[indexConv] = idConv;
+			
 		}
-		return 1;
+		indexConv++;
+		dataRet[indexConv] = NULL;
+		return 0;
 		break;
 	case LOG_FAILED:
 		printf("@LOGIN_FAILED\n");
-		return 0;
+		dataRet[0] = "couldnt log in";
+		return -1;
 		break;
 	case SENDING_TRAFFIC:
 		printf("@SENDING_TRAFFIC\n");
@@ -312,16 +522,21 @@ int interpreter_message(int fd)
 		char *data = malloc(size_buffer);
 		read(fd, data, size_buffer);
 		printf("%s\n", data);
+		dataRet[0] = data;
+
 		break;
-	case CONV:
+	case CONV: // DEPRECATED
 		printf("@CONV\n");
-		while (interpreter_message(fd) != 2)
-			continue;
 		return 2;
 		break;
+	case DENIED:
+		printf("@DENIED_RECEIVED\n");
+		dataRet[0] = payload;
+		return -1;
 	case OK:
 		printf("@OK_RECEIVED\n");
-		return 2;
+		dataRet[0] = payload;
+		return 0;
 	default:
 		return -1;
 		break;
@@ -352,7 +567,7 @@ query_t construire_message(tokens_t inst, char *username, char *content)
 		break;
 	case SEND: // SEND <username> <numCOnv:size>
 		write_query_end(&query, "SEND ");
-
+		break;
 	case SIGNIN: // SIGNIN <username> <password>
 		write_query_end(&query, "SIGNIN ");
 		break;

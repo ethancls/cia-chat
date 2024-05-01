@@ -31,9 +31,11 @@ Je déclare qu'il s'agit de mon propre travail. */
 
 #define RECEIVED_CLIENT 10
 
+#define MAX_USER_NAME_LENGH 32
 const char *PATH_USER = "./database/users";
 
 const char *PATH_CONV = "./database/conversations";
+
 
 typedef enum tokens
 {
@@ -316,7 +318,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		break;
 	case LOG_OK: // LOG_OK <NomUtilisateur> <ListeConversations>
 
-		write_query_end(&query, "LOG_OK  ");
+		write_query_end(&query, "LOG_OK ");
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
@@ -398,7 +400,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		if (!validate_login(username, payload))
 		{
 			printf("login failed\n");
-			rep = serv_construire_message(LOG_FAILED, NULL, NULL);
+			rep = serv_construire_message(LOG_FAILED, username, username);
 			envoyer_query(socket, &rep);
 			break;
 		}
@@ -445,7 +447,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 				printf("user found\n");
 				char *conv = strtok(payload, ":");
 				printf("conv : %s\n", conv);
-				for (int j = 0; j < tabUser[i]->nbConv; i++)
+				for (int j = 0; j < tabUser[i]->nbConv; j++)
 				{
 					if (!strcmp(conv, tabUser[i]->conversationID[j]))
 					{
@@ -460,13 +462,16 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						int sz = atoi(size);
 						char *message = malloc(sizeof(char) * sz);
 						read(socket, message, sz);
+						char * formated = malloc(sizeof(char) * (sz + MAX_USER_NAME_LENGH));
+						snprintf(formated,(sz + MAX_USER_NAME_LENGH),"%s : %s\n",username,message);
 						int fdconv = open(filePath, O_WRONLY | O_APPEND);
 						if(fdconv == -1){
 							perror("open");
 							printf("PANIC A");
 							exit(1);
 						}
-						write(fdconv, message,sz);
+						printf("messaje written\n");
+						write(fdconv, formated,(int)strlen(formated));
 						close(fdconv);
 						// sem_post
 						break;
@@ -497,7 +502,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		if(fdconv == -1){
 			perror("open");
 			printf("PANIC AHHHHHHHHHHHHHHHHHHHH no file\n");
-			exit(1);
+			return -1;
 		}
 		// taille de la discusion
 		int sz = lseek(fdconv, 0, SEEK_END);
@@ -513,7 +518,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		envoyer_query(socket, &rep);
 		write(socket, sendtext, sz+3); // envoie du text de la conv
 		close(fdconv);
-
+		break;
 	case CREATE:
 		printf("@CREATE\n");
 		char * user = strtok(payload,":");
@@ -657,13 +662,13 @@ void reload_database(masterDb_t * dbd){
 	// load database
 	while ((entry = readdir(d)) != NULL)
 	{
-		printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
+		//printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
 		if (entry->d_type == DT_REG)
 		{
 			char *filePath = malloc(sizeof(char) * 256);
 			snprintf(filePath, 256, "%s/%s", PATH_USER, entry->d_name);
-			printf("path : %s\n", filePath);
-			fflush(stdout);
+			//printf("path : %s\n", filePath);
+			//fflush(stdout);
 			int fd = open(filePath, O_RDONLY); // ouverture du fichier avec path
 			if (fd == -1)
 			{
@@ -708,7 +713,7 @@ void reload_database(masterDb_t * dbd){
 	}
 	dbd->nbUser = index;
 	closedir(d);
-	print_master(dbd);
+	//print_master(dbd);
 }
 
 /************************************************************************************************************************$****************/
@@ -718,18 +723,18 @@ int main(int argc, char *argv[])
 	sem_t sem;
 	sem_init(&sem, 0, 1);
 	printf("Serveur TCP\n");
-	masterDb_t *dbd;
+	masterDb_t *dbd = malloc(sizeof(masterDb_t));
 	dbd->User = malloc(sizeof(UserData_t *) * 128);
 	for (int i = 0; i < 128; i++)
 	{
 		dbd->User[i] = malloc(sizeof(UserData_t));
 	}
 	int kill = 0;
-
+	printf("socket\n");
 	int sock = creer_configurer_sock_ecoute(PORT_WCP); // creation socket listen
 
 	reload_database(dbd);
-
+	print_master(dbd);
 	while (1)
 	{
 		struct sockaddr_in sa_clt;
