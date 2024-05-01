@@ -202,7 +202,7 @@ void creerConversation(user_t * u, int sock,char ** content){
 	char participant[1026];
 	scanf("%1000s",participant);
 	char payload[1056];
-	snprintf(payload,1056,"%s:%s:",participant,u->u_pseudo);
+	snprintf(payload,1056,"%s%s:",participant,u->u_pseudo);
 	query_t q;
 	q = construire_message(CREATE,nom,payload);
 	envoyer_query(sock,&q);

@@ -788,7 +788,7 @@ int validate_login(char *username, char *password)
 
 	while (fgets(line, sizeof(char) * 256, file) != NULL)
 	{
-		printf("validate_login : iter\n");
+		//printf("validate_login : iter\n");
 		// Supprime le saut de ligne à la fin si présent
 		line[strcspn(line, "\r\n")] = 0;
 		file_username = strtok_r(line, ";", &saveptr);
