@@ -138,6 +138,7 @@ void envoyerMessage(user_t * u,int sock,char ** content){
 	}
 	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
 	printf("\nmessage : ");
+	fflush(stdout);
 	char * message = malloc(1024);
 	char * sizem = malloc(5);
 	char * payload = malloc(1032);
@@ -145,7 +146,7 @@ void envoyerMessage(user_t * u,int sock,char ** content){
 	printf("you typed : %s\n",message);
 	sprintf(sizem,"%d",(int)strlen(message));
 	snprintf(payload,1032,"%s:%s:",u->conversation[choix]->id_deconv,sizem);
-	printf("payload : %s\n",payload);
+	//printf("payload : %s\n",payload);
 	free(sizem);
 	query_t q;
 	q = construire_message(SEND,u->u_pseudo,payload);
@@ -187,7 +188,7 @@ void voirConversation(user_t * u, int sock,char ** content){
 		printf("failed to get reponse : maybe convo doesnt exist? \n");
 		return;
 	}
-	printf("contenue conv :\n*****************************************************************************\n\n%s\n",content[0]);
+	printf("contenue conv :\n*****************************************************************************\n\n%s\n***********************************************************\n",content[0]);
 	printf("press any key to get back to menu");
 	char dis;
 	scanf("%c",&dis);
@@ -379,7 +380,7 @@ int main(int argc, char *argv[])
 		printf("data %d: %s \n",i,dataBuffer[i]);
 		//user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
         strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
-		printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+		//printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
 		strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
 		incr++;
 	}
@@ -489,13 +490,13 @@ int interpreter_message(int fd,char ** dataRet)
 {
 	char *content = malloc(sizeof(char) * 2048);
 	int size = read_until_nl(fd, content);
-	printf("query received = %s", content);
+	//printf("query received = %s", content);
 	char *TOK = malloc(sizeof(char) * 16);
 	char *info = malloc(sizeof(char) * 48);
 	char *payload = malloc(sizeof(char) * 2048);
 	sscanf(content, "%s %s %s", TOK, info, payload);
 	tokens_t r = convert_to_request(TOK);
-	printf("token = %d\n", r);
+	//printf("token = %d\n", r);
 
 	switch (r)
 	{
@@ -505,11 +506,15 @@ int interpreter_message(int fd,char ** dataRet)
 		char *idConv = strtok(payload, ":");
 		if(idConv == NULL){
 			dataRet[0] = NULL;
-			return 0;,
+			return 0;
 		}
 		char * nomConv = strtok(NULL, ":") ;
-		printf("1ER conv = %s\n",idConv);
-		printf("1ER nom = %s\n",nomConv);
+		if(nomConv == NULL){
+			dataRet[1] = NULL;
+			return 0;
+		}
+		//printf("1ER conv = %s\n",idConv);
+		//printf("1ER nom = %s\n",nomConv);
 		int indexConv = 0;
 		dataRet[indexConv] = idConv;
 		indexConv++;
@@ -517,11 +522,11 @@ int interpreter_message(int fd,char ** dataRet)
 		while ((idConv = strtok(NULL, ":")) != NULL)
 		{
 			indexConv++;
-			printf("idConv = %s\n", idConv);
+			//printf("idConv = %s\n", idConv);
 			dataRet[indexConv] = idConv;
 			indexConv++;
 			nomConv = strtok(NULL, ":");
-			printf("nom = %s\n",nomConv);
+			//printf("nom = %s\n",nomConv);
 			dataRet[indexConv] = nomConv;
 			
 		}
@@ -541,7 +546,7 @@ int interpreter_message(int fd,char ** dataRet)
 		printf("size_buffer = %d\n", size_buffer);
 		char *data = malloc(size_buffer);
 		read(fd, data, size_buffer);
-		printf("%s\n", data);
+		//printf("%s\n", data);
 		dataRet[0] = data;
 
 		break;

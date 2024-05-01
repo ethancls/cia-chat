@@ -254,11 +254,11 @@ void *thread_worker(void *arg)
 			}
 			break;
 		}
-		printf("string is %s\n", query_content);
-		printf("\n");
+		//printf("string is %s\n", query_content);
+		//printf("\n");
 		q.content = query_content;
 		q.size = size_query;
-		printf("Query received: %s\n", q.content);
+		printf("Query received: %s\n\n", q.content);
 		serv_interpreter(&q, args->dbd, args->fd);
 		free(query_content);
 		n++;
@@ -514,7 +514,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		char *l_size = malloc(4);
 		sprintf(l_size, "%d", sz+3);
 		char *sendtext = malloc(sizeof(char) * (sz + 3)); //+2 pour guillemet
-		snprintf(sendtext, sizeof(char) * (sz + 3), "\"%s\"\n", rawtext);
+		snprintf(sendtext, sizeof(char) * (sz + 3), "%s\n", rawtext);
 
 		rep = serv_construire_message(SENDING_TRAFFIC, l_size, l_size); // envoie taille
 		envoyer_query(socket, &rep);
@@ -707,6 +707,7 @@ void reload_database(masterDb_t * dbd){
 				sscanf(content[j], "%[^;];%s", convName[j], conv[j]);
 				j++;
 			}
+			close(fd);
 			dbd->User[index]->nbConv = j;
 			dbd->User[index]->conversationID = conv;
 			dbd->User[index]->conversationName = convName;
