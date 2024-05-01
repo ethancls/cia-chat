@@ -503,6 +503,10 @@ int interpreter_message(int fd,char ** dataRet)
 		printf("@LOGIN_OK\n");
 		
 		char *idConv = strtok(payload, ":");
+		if(idConv == NULL){
+			dataRet[0] = NULL;
+			return 0;,
+		}
 		char * nomConv = strtok(NULL, ":") ;
 		printf("1ER conv = %s\n",idConv);
 		printf("1ER nom = %s\n",nomConv);
