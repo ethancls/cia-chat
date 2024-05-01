@@ -224,13 +224,16 @@ void miseAJourServeur(user_t * user, int sock,char ** content){
 		printf("failed to update : mauvais nom utilisateur");
 		return;
 	}
-	for(int i = 0; i < CONTENT_MAX_NB; i++){
+	int incr = 0;
+	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
 		if(content[i] == NULL){
-			user->nb_conv = i;
+			user->nb_conv = incr;
 			break;
 		}
-		strcpy(user->conversation[i]->id_deconv, content[i]);
-		sprintf(user->conversation[i]->nom,"%d",i);
+		printf("data %d: %s \n",i,content[i]);
+		strcpy(user->conversation[incr]->id_deconv, content[i]);
+		strcpy(user->conversation[incr]->nom, content[i + 1]);
+		incr++;
 	}
 	printf("convo loaded\n");
 	printf("\n***********************STATE UPDATED***********************************\n");
@@ -316,10 +319,10 @@ int main(int argc, char *argv[])
 	for(int i =0; i < CONTENT_MAX_NB; i++){
 		user->conversation[i] = malloc(sizeof(convo_t));
 		user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
-		user->conversation[i]->nom = malloc(5);
+		user->conversation[i]->nom = malloc(32);
 	}
 	query_t * q = malloc(sizeof(query_t));
-	char ** dataBuffer = malloc(sizeof(char*) * CONTENT_MAX_NB);
+	char ** dataBuffer = malloc(sizeof(char*) * CONTENT_MAX_NB * 2);
 	//for(int i =0; i < CONTENT_MAX_NB; i++){
 	//	dataBuffer[i] = malloc(CONTENT_MAX_SIZE);
 	//}
@@ -366,17 +369,20 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 	printf("*************************LOADING DATA***************************************\n");
-	for(int i = 0; i < CONTENT_MAX_NB; i++){
+	int incr = 0;
+	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
 		if(dataBuffer[i] == NULL){
-			user->nb_conv = i;
+			user->nb_conv = incr;
 			break;
 		}
 		printf("data %d: %s \n",i,dataBuffer[i]);
 		//user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
-        strcpy(user->conversation[i]->id_deconv, dataBuffer[i]);
-		printf("data loades in conversation %d: %s \n",i,user->conversation[i]->id_deconv);
-		sprintf(user->conversation[i]->nom,"%d",i);
+        strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
+		printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+		strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
+		incr++;
 	}
+
 
 	printf("convo loaded");
 
@@ -496,18 +502,27 @@ int interpreter_message(int fd,char ** dataRet)
 		printf("@LOGIN_OK\n");
 		
 		char *idConv = strtok(payload, ":");
+		char * nomConv = strtok(NULL, ":") ;
 		printf("1ER conv = %s\n",idConv);
+		printf("1ER nom = %s\n",nomConv);
 		int indexConv = 0;
 		dataRet[indexConv] = idConv;
+		indexConv++;
+		dataRet[indexConv] = nomConv;
 		while ((idConv = strtok(NULL, ":")) != NULL)
 		{
 			indexConv++;
 			printf("idConv = %s\n", idConv);
 			dataRet[indexConv] = idConv;
+			indexConv++;
+			nomConv = strtok(NULL, ":");
+			printf("nom = %s\n",nomConv);
+			dataRet[indexConv] = nomConv;
 			
 		}
 		indexConv++;
 		dataRet[indexConv] = NULL;
+		
 		return 0;
 		break;
 	case LOG_FAILED:

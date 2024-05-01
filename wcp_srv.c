@@ -428,6 +428,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		{
 			content = strcat(content, master->User[userIndex]->conversationID[i]);
 			content = strcat(content, ":");
+			content = strcat(content, master->User[userIndex]->conversationName[i]);
+			content = strcat(content, ":");
 		}
 		printf("content : %s\n", content);
 		rep = serv_construire_message(LOG_OK, username, content);
