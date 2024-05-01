@@ -250,7 +250,7 @@ void menu(user_t * u,int sock,char ** content) {
         printf("1. Envoyer un message\n");
         printf("2. Voir la conversation\n");
         printf("3. Créer une conversation\n");
-        printf("4. Mettre à jour le serveur\n");
+        printf("4. Mettre à jour les conversation\n");
         printf("0. Quitter\n");
         printf("Choisissez une option : ");
         scanf("%d", &choix);
