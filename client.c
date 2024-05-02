@@ -1,6 +1,10 @@
 #include "./gtk_ui.h"
 #include "./tcp_network.h"
 
+/* Variables globales */
+int sock;
+user_t *user;
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)

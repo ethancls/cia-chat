@@ -87,7 +87,3 @@ void creerConversation(user_t *u, int sock, char **content);
 void miseAJourServeur(user_t *user, int sock, char **content);
 void menu(user_t *u, int sock, char **content);
 tokens_t convert_to_request(const char *str);
-
-/* Variables globales */
-int sock;
-user_t *user;

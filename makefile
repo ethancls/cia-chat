@@ -16,7 +16,6 @@ endif
 
 TARGET := cia-chat
 SRCS := client.c wcp_clt.c
-OBJS := $(SRCS:.c=.o)
 
 all: $(TARGET)
 
