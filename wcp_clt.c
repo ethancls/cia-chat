@@ -249,7 +249,7 @@ void creerConversation(user_t * u, int sock,char ** content){
 		printf("failed to create : %s\n",content[0]);
 		return;
 	}
-	printf("success created conversation : %s", content[0]);
+	printf("success created conversation :   %s", content[0]);
 
 }
  
