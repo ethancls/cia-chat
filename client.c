@@ -215,10 +215,10 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 
     strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
 
-	char nom[32] = "nouvelle conversation";
+	char nom[32] = "nouvelle";
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
 	char payload[1056];
-	snprintf(payload,1056,"%s%s:",contact_name,user->u_pseudo);
+	snprintf(payload,1056,"%s:%s:",contact_name,user->u_pseudo);
 	query_t q = construire_message(CREATE,nom,payload);
 	envoyer_query(sock,&q);
 	int rep = interpreter_message(sock,content);

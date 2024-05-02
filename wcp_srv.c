@@ -448,6 +448,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		{
 			perror("open");
 			printf("PANIC AHHHHHHHHHHHHHHHHHHHH no file\n");
+			rep = serv_construire_message(DENIED, username, "no_convo_found");
+			envoyer_query(socket, &rep);
 			return -1;
 		}
 		// taille de la discusion
@@ -469,12 +471,16 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("@CREATE\n");
 		char *user = strtok(payload, ":");
 		char *conversation = create_new_conversation_file(user);
-		addParticipant(conversation, username, user);
+		if(addParticipant(conversation, username, user) == -1){
+			rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant");
+			envoyer_query(socket, &rep);
+			break;
+		}
 		while ((user = strtok(NULL, ":")) != NULL)
 		{
 			addParticipant(conversation, username, user);
 		}
-		rep = serv_construire_message(OK, conversation, "conversation created");
+		rep = serv_construire_message(OK, conversation, "conversation_created");
 		envoyer_query(socket, &rep);
 		// OKS
 		//  renvoyer l'id de la conv au client
@@ -566,6 +572,7 @@ char *create_new_conversation_file(char *conv_name)
 	FILE *file = fopen(filePath, "w");
 	if (file != NULL)
 	{
+		fprintf(file,"*******************(START OF NEW CONVERSATION)***************************\n");// evite le chat vide
 		fclose(file);
 	}
 	else
@@ -575,7 +582,7 @@ char *create_new_conversation_file(char *conv_name)
 	return chat_id;
 }
 
-void addParticipant(char *convId, char *nomconv, char *participant)
+int addParticipant(char *convId, char *nomconv, char *participant)
 {
 	char filename[64];
 	snprintf(filename, sizeof(filename), "./database/users/%s.txt", participant);
@@ -584,14 +591,14 @@ void addParticipant(char *convId, char *nomconv, char *participant)
 	if (file == -1)
 	{
 		perror("open");
-		return;
+		return -1;
 	}
 
 	char *temp = malloc(64);
 	snprintf(temp, 64, "%s;%s\n", nomconv, convId);
 	write(file, temp, strlen(temp));
 	free(temp);
-	return;
+	return 0;
 }
 
 void reload_database(masterDb_t *dbd)

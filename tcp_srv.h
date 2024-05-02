@@ -98,7 +98,7 @@ int validate_login(char *username, char *password);
 void hash_password(char *password, char *hashed_password_hex);
 void write_login_to_file(char *username, char *password);
 char *create_new_conversation_file(char *conv_name);
-void addParticipant(char *convId, char *nomconv, char *participant);
+int addParticipant(char *convId, char *nomconv, char *participant);
 int serv_interpreter(query_t *q, masterDb_t *master, int socket);
 query_t serv_construire_message(tokens_t token, char *info, char *content);
 void envoyer_query(int fd, query_t *q);
