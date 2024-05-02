@@ -1,7 +1,5 @@
 #include "./tcp_srv.h"
 
-/************************************************************************************************************************$****************/
-
 int main(int argc, char *argv[])
 {
 	sem_t sem;
@@ -21,15 +19,15 @@ int main(int argc, char *argv[])
 	print_master(dbd);
 	while (1)
 	{
-		struct sockaddr_in sa_clt;
-		socklen_t sl = sizeof(sa_clt);
+		struct sockaddr_in * sa_clt = malloc(sizeof(struct sockaddr_in));
+		socklen_t sl = sizeof(struct sockaddr_in);
 		printf("en attente de connection\n");
-		int sctl = accept(sock, (struct sockaddr *)&sa_clt, &sl); // connection d'un client
-		struct sockaddr_in addr;
-		socklen_t addrlen = sizeof(addr);
-		getpeername(sock, (struct sockaddr *)&addr, &addrlen);
-		char ip_str[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+		int sctl = accept(sock, (struct sockaddr *)sa_clt, &sl); // connection d'un client
+		struct sockaddr_in * addr = malloc(sizeof(struct sockaddr_in));
+		socklen_t addrlen = sizeof(struct sockaddr_in);
+		getpeername(sctl, (struct sockaddr *)addr, &addrlen);
+		char * ip_str = malloc(INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
 		printf("Connection from %s\n", ip_str);
 		work_args * wa = malloc(sizeof(work_args));
 		wa->dbd = dbd;
@@ -38,6 +36,9 @@ int main(int argc, char *argv[])
 		// Création du thread
 		pthread_create(&threadw, NULL, thread_worker, wa); // lancement d'un thread pour un client
 		pthread_detach(threadw);							// le systeme peut recuperer les ressource quand le thread est fermer
+
+		free(sa_clt);
+    	free(ip_str);
 	}
 	close(sock);
 	return 0;
