@@ -6,7 +6,7 @@ CC := gcc
 
 # Flags for both CFLAGS and LDFLAGS
 ifeq ($(UNAME_S),Linux)
-    CFLAGS := -Wall `pkg-config --cflags gtk+-3.0`
+    CFLAGS := -w `pkg-config --cflags gtk+-3.0`
     LDFLAGS := -L/usr/local/lib `pkg-config --libs gtk+-3.0` -lssl -lcrypto
 endif
 ifeq ($(UNAME_S),Darwin) # Darwin is the system name for macOS
