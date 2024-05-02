@@ -403,7 +403,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, conv);
 						printf("path : %s\n", filePath);
 						// sem_wait
-						int sz = atoi(size);
+						int sz = atoi(size) + 1;
 						char *message = malloc(sizeof(char) * sz);
 						read(socket, message, sz);
 						char *formated = malloc(sizeof(char) * (sz + MAX_USER_NAME_LENGH));

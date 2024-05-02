@@ -626,7 +626,7 @@ void send_message(GtkWidget *widget, gpointer data)
     }
 	char * sizem = malloc(5);
 	char * payload = malloc(1032);
-	sprintf(sizem,"%d",(int)strlen(message));
+	sprintf(sizem,"%d",(int)strlen(message) + 1);
 	snprintf(payload,1032,"%s:%s:",conv_id,sizem);
 	
 	query_t q;
@@ -635,7 +635,7 @@ void send_message(GtkWidget *widget, gpointer data)
     printf("Message: %s\n", message);
 	q = construire_message(SEND,user->u_pseudo,payload);
 	envoyer_query(sock,&q);
-	write(sock,message,(int)strlen(message));
+	write(sock,message,(int)strlen(message)+1);
 
 	int rep = interpreter_message(sock,content);
 	if(rep == -1){
