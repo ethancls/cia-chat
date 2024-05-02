@@ -196,7 +196,7 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 {
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
-    char *participant = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
+    char *contact_name = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
     g_strstrip(contact_name);
     if (contact_name[0] == '\0')
         return;
@@ -214,7 +214,7 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 	char nom[32] = "nouvelle conversation";
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
 	char payload[1056];
-	snprintf(payload,1056,"%s%s:",participant,u->u_pseudo);
+	snprintf(payload,1056,"%s%s:",contact_name,user->u_pseudo);
 	query_t q = construire_message(CREATE,nom,payload);
 	envoyer_query(sock,&q);
 	int rep = interpreter_message(sock,content);
