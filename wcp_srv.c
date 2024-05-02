@@ -31,10 +31,12 @@ int main(int argc, char *argv[])
 		char ip_str[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
 		printf("Connection from %s\n", ip_str);
-		work_args wa = {.dbd = dbd, .fd = sctl};
+		work_args * wa = malloc(sizeof(work_args));
+		wa->dbd = dbd;
+		wa->fd = sctl;
 		pthread_t threadw;
 		// Création du thread
-		pthread_create(&threadw, NULL, thread_worker, &wa); // lancement d'un thread pour un client
+		pthread_create(&threadw, NULL, thread_worker, wa); // lancement d'un thread pour un client
 		pthread_detach(threadw);							// le systeme peut recuperer les ressource quand le thread est fermer
 	}
 	close(sock);
