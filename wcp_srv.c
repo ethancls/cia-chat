@@ -1,106 +1,4 @@
-/* Timothée M'BASSIDJE 12104516
-Je déclare qu'il s'agit de mon propre travail. */
-/* fichiers de la bibliothèque standard */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <inttypes.h>
-/* bibliothèque standard unix */
-#include <unistd.h> /* close, read, write */
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <dirent.h>
-#include <openssl/sha.h>
-#include <fcntl.h>
-#include <errno.h>
-/* spécifique à internet */
-#include <arpa/inet.h> /* inet_pton */
-/* spécifique aux comptines */
-
-// MACOS : gcc -w wcp_srv.c -o wcp_srv -I/opt/homebrew/opt/openssl@3/include -L/opt/homebrew/opt/openssl@3/lib -lssl -lcrypto
-// LINUX : gcc -w wcp_srv.c -o wcp_srv -lssl -lcrypto
-
-#include <pthread.h>
-#include <semaphore.h>
-
-#define PORT_WCP 4321
-
-#define NB_LIGNES_INFOS 2
-
-#define RECEIVED_CLIENT 10
-
-#define MAX_USER_NAME_LENGH 32
-const char *PATH_USER = "./database/users";
-
-const char *PATH_CONV = "./database/conversations";
-
-
-typedef enum tokens
-{
-	LOG,
-	SIGNIN, // A faire
-	SEND,
-	UPDATE,
-	CREATE,
-	ADD,
-	CONV,
-	USERID,
-	LOG_OK,
-	LOG_FAILED,
-	DENIED,
-	OK,
-	SENDING_TRAFFIC,
-
-} tokens_t;
-
-typedef struct dymTab
-{
-	void *tab;
-	uint16_t size;
-	size_t type;
-} dymTab_t;
-
-typedef struct UserData
-{
-	char *userID;
-	char **conversationID;
-	char **conversationName;
-	int nbConv;
-
-} UserData_t;
-
-typedef struct query_
-{
-	char * content; // taille temporaire
-	uint16_t size;
-} query_t;
-
-typedef struct masterDb
-{
-	UserData_t **User;
-	int nbUser;
-} masterDb_t;
-
-// structure utiliser pour les threads
-typedef struct work_args
-{
-	int fd;
-	masterDb_t *dbd;
-} work_args;
-
-// Prototypes des fonctions publiques
-int serv_interpreter(query_t *q, masterDb_t *master, int socket);
-void print_master(masterDb_t *master);
-int creer_configurer_sock_ecoute(uint16_t port);
-void hash_password(char *password, char *hashed_password_hex);
-int validate_login(char *username, char *password);
-void write_login_to_file(char *username, char *password);
-char *create_new_conversation_file(char *conv_name);
-void addParticipant(char *convId, char *nomconv, char *participant);
-void usage(char *nom_prog);
-void reload_database(masterDb_t * m);
+#include "./tcp_srv.h"
 
 tokens_t convert_to_request(const char *str)
 {
@@ -132,27 +30,27 @@ tokens_t convert_to_request(const char *str)
 	{
 		return OK;
 	}
-	else if(strcmp(str, "CONV") == 0)
+	else if (strcmp(str, "CONV") == 0)
 	{
 		return CONV;
 	}
-	else if(strcmp(str, "USERID") == 0)
+	else if (strcmp(str, "USERID") == 0)
 	{
 		return USERID;
 	}
-	else if(strcmp(str, "LOG_OK") == 0)
+	else if (strcmp(str, "LOG_OK") == 0)
 	{
 		return LOG_OK;
 	}
-	else if(strcmp(str, "LOG_FAILED") == 0)
+	else if (strcmp(str, "LOG_FAILED") == 0)
 	{
 		return LOG_FAILED;
 	}
-	else if(strcmp(str, "DENIED") == 0)
+	else if (strcmp(str, "DENIED") == 0)
 	{
 		return DENIED;
 	}
-	else if(strcmp(str, "SENDING_TRAFFIC") == 0)
+	else if (strcmp(str, "SENDING_TRAFFIC") == 0)
 	{
 		return SENDING_TRAFFIC;
 	}
@@ -194,7 +92,7 @@ int read_until_nl(int fd, char *buf)
 	free(readChar); // on libere notre malloc
 	return numChar;
 }
-char * create_new_conversation_file( char *conv_name);
+char *create_new_conversation_file(char *conv_name);
 
 void usage(char *nom_prog)
 {
@@ -254,8 +152,8 @@ void *thread_worker(void *arg)
 			}
 			break;
 		}
-		//printf("string is %s\n", query_content);
-		//printf("\n");
+		// printf("string is %s\n", query_content);
+		// printf("\n");
 		q.content = query_content;
 		q.size = size_query;
 		printf("Query received: %s\n\n", q.content);
@@ -269,11 +167,11 @@ void *thread_worker(void *arg)
 }
 void to_hex_string(unsigned char *hash, char *output, size_t length)
 {
-    for (size_t i = 0; i < length; i++)
-    {
-        sprintf(output + (i * 2), "%02x", hash[i]);
-    }
-    output[length * 2] = '\0';
+	for (size_t i = 0; i < length; i++)
+	{
+		sprintf(output + (i * 2), "%02x", hash[i]);
+	}
+	output[length * 2] = '\0';
 }
 
 void write_query_end(query_t *q, char *wr)
@@ -350,7 +248,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
 
-		break; 
+		break;
 	case SENDING_TRAFFIC: // SENDING_TRAFFIC <Taille> <Contenu>
 		write_query_end(&query, "SENDING_TRAFFIC ");
 		write_query_end(&query, info);
@@ -455,25 +353,26 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 					{
 						printf("conversation found\n");
 						check = 1;
-						char * size = strtok(NULL, ":");
-						
-						char * filePath = malloc(sizeof(char) * 256);
+						char *size = strtok(NULL, ":");
+
+						char *filePath = malloc(sizeof(char) * 256);
 						snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, conv);
 						printf("path : %s\n", filePath);
 						// sem_wait
 						int sz = atoi(size);
 						char *message = malloc(sizeof(char) * sz);
 						read(socket, message, sz);
-						char * formated = malloc(sizeof(char) * (sz + MAX_USER_NAME_LENGH));
-						snprintf(formated,(sz + MAX_USER_NAME_LENGH),"%s : %s\n",username,message);
+						char *formated = malloc(sizeof(char) * (sz + MAX_USER_NAME_LENGH));
+						snprintf(formated, (sz + MAX_USER_NAME_LENGH), "%s : %s\n", username, message);
 						int fdconv = open(filePath, O_WRONLY | O_APPEND);
-						if(fdconv == -1){
+						if (fdconv == -1)
+						{
 							perror("open");
 							printf("PANIC A");
 							exit(1);
 						}
 						printf("messaje written\n");
-						write(fdconv, formated,(int)strlen(formated));
+						write(fdconv, formated, (int)strlen(formated));
 						close(fdconv);
 						// sem_post
 						break;
@@ -501,7 +400,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, payload);
 		printf("path : %s\n", filePath);
 		int fdconv = open(filePath, O_RDONLY);
-		if(fdconv == -1){
+		if (fdconv == -1)
+		{
 			perror("open");
 			printf("PANIC AHHHHHHHHHHHHHHHHHHHH no file\n");
 			return -1;
@@ -512,22 +412,23 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		char *rawtext = malloc(sizeof(char) * sz);
 		read(fdconv, rawtext, sz);
 		char *l_size = malloc(4);
-		sprintf(l_size, "%d", sz+3);
+		sprintf(l_size, "%d", sz + 3);
 		char *sendtext = malloc(sizeof(char) * (sz + 3)); //+2 pour guillemet
 		snprintf(sendtext, sizeof(char) * (sz + 3), "%s\n", rawtext);
 
 		rep = serv_construire_message(SENDING_TRAFFIC, l_size, l_size); // envoie taille
 		envoyer_query(socket, &rep);
-		write(socket, sendtext, sz+3); // envoie du text de la conv
+		write(socket, sendtext, sz + 3); // envoie du text de la conv
 		close(fdconv);
 		break;
 	case CREATE:
 		printf("@CREATE\n");
-		char * user = strtok(payload,":");
-		char * conversation = create_new_conversation_file(user);
-		addParticipant(conversation,username,user);
-		while((user = strtok(NULL,":")) != NULL){
-			addParticipant(conversation,username,user);
+		char *user = strtok(payload, ":");
+		char *conversation = create_new_conversation_file(user);
+		addParticipant(conversation, username, user);
+		while ((user = strtok(NULL, ":")) != NULL)
+		{
+			addParticipant(conversation, username, user);
 		}
 		rep = serv_construire_message(OK, conversation, "conversation created");
 		envoyer_query(socket, &rep);
@@ -537,9 +438,9 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		break;
 	case SIGNIN:
 		printf("@SIGNIN\n");
-		write_login_to_file(username,payload);
+		write_login_to_file(username, payload);
 		rep = serv_construire_message(OK, username, "accepted");
-		envoyer_query(socket,&rep);
+		envoyer_query(socket, &rep);
 		// OKS
 		// OKR
 		break;
@@ -559,96 +460,98 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 
 void write_login_to_file(char *username, char *password)
 {
-    char * hex_string = malloc(SHA256_DIGEST_LENGTH * 2 + 1);
-    char * hashed_password_hex = malloc(sizeof(char) * (SHA256_DIGEST_LENGTH * 2 + 1));
+	char *hex_string = malloc(SHA256_DIGEST_LENGTH * 2 + 1);
+	char *hashed_password_hex = malloc(sizeof(char) * (SHA256_DIGEST_LENGTH * 2 + 1));
 
 	// Hacher le mot de passe fourni
 	hash_password(password, hashed_password_hex);
 
-    // Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
-    FILE *file = fopen("./database/login.txt", "a");
-    if (file != NULL)
-    {
-        fprintf(file, "%s;%s\n", username, hashed_password_hex);
-        fclose(file);
-    }
-    else
-    {
-        printf("Erreur lors de l'ouverture du fichier.\n");
-    }
+	// Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
+	FILE *file = fopen("./database/login.txt", "a");
+	if (file != NULL)
+	{
+		fprintf(file, "%s;%s\n", username, hashed_password_hex);
+		fclose(file);
+	}
+	else
+	{
+		printf("Erreur lors de l'ouverture du fichier.\n");
+	}
 
-	char * filename = malloc(64);
-    snprintf(filename, 64, "./database/users/%s.txt", username);
+	char *filename = malloc(64);
+	snprintf(filename, 64, "./database/users/%s.txt", username);
 
-    file = fopen(filename, "w");
-    if (file != NULL)
-    {
-        fprintf(file, "Firstname: %s\n", username);
-        fprintf(file, "Lastname: %s\n", username);
-        fclose(file);
-    }
-    else
-    {
-        printf("Error: Unable to create file\n");
-    }
+	file = fopen(filename, "w");
+	if (file != NULL)
+	{
+		fprintf(file, "Firstname: %s\n", username);
+		fprintf(file, "Lastname: %s\n", username);
+		fclose(file);
+	}
+	else
+	{
+		printf("Error: Unable to create file\n");
+	}
 }
 
 char rand_char()
 {
-     char charset[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-     size_t charset_size = sizeof(charset) - 1;
-    return charset[rand() % charset_size];
+	char charset[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	size_t charset_size = sizeof(charset) - 1;
+	return charset[rand() % charset_size];
 }
 
 void generate_random_id(char *id, size_t size)
 {
-    srand(time(NULL));
-    for (size_t i = 0; i < size; ++i)
-    {
-        id[i] = rand_char();
-    }
-    id[size - 1] = '\0'; // Null-terminate the string
+	srand(time(NULL));
+	for (size_t i = 0; i < size; ++i)
+	{
+		id[i] = rand_char();
+	}
+	id[size - 1] = '\0'; // Null-terminate the string
 }
 
-char * create_new_conversation_file( char *conv_name)
+char *create_new_conversation_file(char *conv_name)
 {
-    char * chat_id = malloc(37);
-    generate_random_id(chat_id, 37);
+	char *chat_id = malloc(37);
+	generate_random_id(chat_id, 37);
 
-    char * filePath = malloc(256);
-    snprintf(filePath, 256, "./database/conversations/%s.txt", chat_id);
+	char *filePath = malloc(256);
+	snprintf(filePath, 256, "./database/conversations/%s.txt", chat_id);
 
-    FILE *file = fopen(filePath, "w");
-    if (file != NULL)
-    {
-        fclose(file);
-    }
-    else
-    {
-        printf("Error creating conversation file: %s\n", filePath);
-    }
+	FILE *file = fopen(filePath, "w");
+	if (file != NULL)
+	{
+		fclose(file);
+	}
+	else
+	{
+		printf("Error creating conversation file: %s\n", filePath);
+	}
 	return chat_id;
 }
 
-void addParticipant(char * convId, char * nomconv, char * participant){
+void addParticipant(char *convId, char *nomconv, char *participant)
+{
 	char filename[64];
-    snprintf(filename, sizeof(filename), "./database/users/%s.txt", participant);
+	snprintf(filename, sizeof(filename), "./database/users/%s.txt", participant);
 
-    int file = open(filename,O_WRONLY | O_APPEND);
-	if(file == -1){
+	int file = open(filename, O_WRONLY | O_APPEND);
+	if (file == -1)
+	{
 		perror("open");
 		return;
 	}
 
-	char * temp = malloc(64);
-	snprintf(temp,64,"%s;%s\n",nomconv,convId);
-	write(file,temp,strlen(temp));
+	char *temp = malloc(64);
+	snprintf(temp, 64, "%s;%s\n", nomconv, convId);
+	write(file, temp, strlen(temp));
 	free(temp);
 	return;
-
 }
 
-void reload_database(masterDb_t * dbd){
+void reload_database(masterDb_t *dbd)
+{
 	DIR *d = opendir("./database/users");
 
 	if (d == NULL)
@@ -664,13 +567,13 @@ void reload_database(masterDb_t * dbd){
 	// load database
 	while ((entry = readdir(d)) != NULL)
 	{
-		//printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
+		// printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
 		if (entry->d_type == DT_REG)
 		{
 			char *filePath = malloc(sizeof(char) * 256);
 			snprintf(filePath, 256, "%s/%s", PATH_USER, entry->d_name);
-			//printf("path : %s\n", filePath);
-			//fflush(stdout);
+			// printf("path : %s\n", filePath);
+			// fflush(stdout);
 			int fd = open(filePath, O_RDONLY); // ouverture du fichier avec path
 			if (fd == -1)
 			{
@@ -698,11 +601,11 @@ void reload_database(masterDb_t * dbd){
 			}
 			int j = 0;
 			char **content = malloc(sizeof(char *) * 64);
-				for (int i = 0; i < 64; i++)
+			for (int i = 0; i < 64; i++)
 			{
 				content[i] = malloc(sizeof(char) * 64);
 			}
-			while (1 < read_until_nl(fd,content[j]))
+			while (1 < read_until_nl(fd, content[j]))
 			{
 				sscanf(content[j], "%[^;];%s", convName[j], conv[j]);
 				j++;
@@ -716,7 +619,7 @@ void reload_database(masterDb_t * dbd){
 	}
 	dbd->nbUser = index;
 	closedir(d);
-	//print_master(dbd);
+	// print_master(dbd);
 }
 
 /************************************************************************************************************************$****************/
@@ -744,7 +647,13 @@ int main(int argc, char *argv[])
 		socklen_t sl = sizeof(sa_clt);
 		printf("en attente de connection\n");
 		int sctl = accept(sock, (struct sockaddr *)&sa_clt, &sl); // connection d'un client
-		struct work_args wa = {.dbd = dbd, .fd = sctl};
+		struct sockaddr_in addr;
+		socklen_t addrlen = sizeof(addr);
+		getpeername(sock, (struct sockaddr *)&addr, &addrlen);
+		char ip_str[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+		printf("Connection from %s\n", ip_str);
+		work_args wa = {.dbd = dbd, .fd = sctl};
 		pthread_t threadw;
 		// Création du thread
 		pthread_create(&threadw, NULL, thread_worker, &wa); // lancement d'un thread pour un client
@@ -754,7 +663,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void hash_password( char *password, char *hashed_password_hex)
+void hash_password(char *password, char *hashed_password_hex)
 {
 	unsigned char hash[SHA256_DIGEST_LENGTH]; // Buffer for the binary hash
 	SHA256_CTX sha256;
@@ -789,8 +698,8 @@ int validate_login(char *username, char *password)
 
 	while (fgets(line, sizeof(char) * 256, file) != NULL)
 	{
-		//printf("validate_login : iter\n");
-		// Supprime le saut de ligne à la fin si présent
+		// printf("validate_login : iter\n");
+		//  Supprime le saut de ligne à la fin si présent
 		line[strcspn(line, "\r\n")] = 0;
 		file_username = strtok_r(line, ";", &saveptr);
 		file_password_hash = strtok_r(NULL, ";", &saveptr);

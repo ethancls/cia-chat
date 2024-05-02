@@ -1,4 +1,53 @@
-#include "./client.h"
+#include "./gtk_ui.h"
+#include "./tcp_network.h"
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        usage(argv[0]);
+        return 1;
+    }
+
+    printf("Connecting to %s\n", argv[1]);
+    sock = creer_connecter_sock(argv[1], PORT_WCP);
+
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    if (getpeername(sock, (struct sockaddr *)&addr, &addrlen) == -1)
+    {
+        perror("getpeername failed");
+        close(sock);
+        return 1;
+    }
+
+    char ip_str[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN) == NULL)
+    {
+        perror("inet_ntop failed");
+        close(sock);
+        return 1;
+    }
+
+    user = malloc(sizeof(user_t));
+    user->conversation = malloc(sizeof(convo_t *) * CONTENT_MAX_NB);
+    for (int i = 0; i < CONTENT_MAX_NB; i++)
+    {
+        user->conversation[i] = malloc(sizeof(convo_t));
+        user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
+        user->conversation[i]->nom = malloc(32);
+    }
+
+    printf("Connected to %s\n", ip_str);
+
+    gtk_init(&argc, &argv);
+
+    open_login_window();
+
+    gtk_main();
+
+    return 0;
+}
 
 void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
 {
@@ -11,77 +60,57 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
-void hash_password(const char *password, char *hashed_password_hex)
+void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
 {
-    unsigned char hashed_password[SHA256_DIGEST_LENGTH];
-    SHA256((const unsigned char *)password, strlen(password), hashed_password);
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    char *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
+    char *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
+
+    user->u_pseudo = username;
+    user->password = password;
+
+    printf("Logging in as %s\n", user->u_pseudo);
+    printf("Password: %s\n", user->password);
+
+    query_t *q = malloc(sizeof(query_t));
+    char **dataBuffer = malloc(sizeof(char *) * CONTENT_MAX_NB * 2);
+
+    *q = construire_message(LOG, user->u_pseudo, user->password);
+    printf("Built login query\n");
+    envoyer_query(sock, q);
+    printf("Sent login query\n");
+    int reponse = interpreter_message(sock, dataBuffer);
+
+    printf("*************************LOADING DATA***************************************\n");
+    int incr = 0;
+    for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
     {
-        sprintf(hashed_password_hex + (i * 2), "%02x", hashed_password[i]);
-    }
-    hashed_password_hex[SHA256_DIGEST_LENGTH * 2] = '\0';
-}
-
-gboolean validate_login(const gchar *username, const gchar *password)
-{
-    gboolean valid = FALSE;
-    gchar line[256];
-    gchar *file_username;
-    gchar *file_password_hash;
-    gchar *saveptr; // Pour strtok_r
-    gchar hashed_password_hex[SHA256_DIGEST_LENGTH * 2 + 1];
-
-    // Hacher le mot de passe fourni
-    hash_password(password, hashed_password_hex);
-
-    FILE *file = fopen("./database/login.txt", "r");
-    if (file == NULL)
-    {
-        return FALSE;
-    }
-
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
-        // Supprime le saut de ligne à la fin si présent
-        line[strcspn(line, "\r\n")] = 0;
-
-        file_username = strtok_r(line, ";", &saveptr);
-        file_password_hash = strtok_r(NULL, ";", &saveptr);
-
-        if (file_username && file_password_hash &&
-            strcmp(username, file_username) == 0 &&
-            strcmp(hashed_password_hex, file_password_hash) == 0)
+        if (dataBuffer[i] == NULL)
         {
-            valid = TRUE;
+            user->nb_conv = incr;
             break;
         }
+        printf("id %d: %s ", i, dataBuffer[i]);
+        // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
+        strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
+        // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+        strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
+        printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
+        incr++;
     }
+    printf("*************************DATA LOADED***************************************\n");
 
-    fclose(file);
-    return valid;
-}
-
-void login(GtkWidget *widget, gpointer data)// envoyer token au serveur
-{
-    const gchar *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
-    const gchar *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
-
-    if (validate_login(username, password)) // recoit la réponse 0 ou -1
+    if (reponse == -1)
     {
+        gtk_label_set_text(GTK_LABEL(error_label), "Invalid username or password");
+        return;
+    }
+    else
+    {
+        printf("Logged in\n");
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
         open_chat_window();
     }
-    else
-    {
-        gtk_label_set_text(GTK_LABEL(error_label), "Invalid username or password");
-    }
-}
-
-void send_file(GtkWidget *widget, gpointer data)
-{
-    printf("Sended file\n");
-    return;
 }
 
 void logout(GtkWidget *widget, gpointer data) // envoyer logout seveur
@@ -99,11 +128,11 @@ void logout(GtkWidget *widget, gpointer data) // envoyer logout seveur
 
 void on_contact_clicked(GtkWidget *widget, gpointer data)
 {
-    const gchar *contact_name = gtk_button_get_label(GTK_BUTTON(widget));
+    char *contact_name = gtk_button_get_label(GTK_BUTTON(widget));
 
     strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
 
-    load_chat_history();
+    load_chat_history(actual_conversation);
 }
 
 gboolean is_contact_valid(const gchar *contact_name)
@@ -133,33 +162,13 @@ gboolean is_contact_valid(const gchar *contact_name)
     }
     fclose(file);
 
-    // Check already a conversation with this contact
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
-    file = fopen(filePath, "r");
-    if (file != NULL)
+    for(int i = 0; i < user->nb_conv; i++)
     {
-        char line[512];
-        int line_count = 0;
-        while (fgets(line, sizeof(line), file) != NULL)
+        if (strcmp(user->conversation[i]->nom, contact_name) == 0)
         {
-            if (line_count >= 2)
-            {
-                char *file_partner_name = strtok(line, ";");
-                if (strcmp(contact_name, file_partner_name) == 0)
-                {
-                    contact_found = FALSE;
-                    break;
-                }
-            }
-            line_count++;
+            contact_found = FALSE;
+            break;
         }
-        fclose(file);
-    }
-
-    if (strcmp(user_name, contact_name) == 0)
-    {
-        contact_found = FALSE;
     }
 
     return contact_found;
@@ -168,7 +177,8 @@ gboolean is_contact_valid(const gchar *contact_name)
 // Déclarez la fonction de temporisation
 gboolean reload_messages(gpointer user_data)
 {
-    load_chat_history();
+    load_chat_history(actual_conversation);
+    load_contacts();
     return TRUE;
 }
 
@@ -176,7 +186,7 @@ gboolean reload_messages(gpointer user_data)
 void start_message_reload_timer()
 {
     // Spécifiez l'intervalle en millisecondes
-    const guint interval_milliseconds = 2000;
+    const guint interval_milliseconds = 5000;
 
     // Ajoutez une temporisation périodique avec l'intervalle spécifié
     g_timeout_add(interval_milliseconds, reload_messages, NULL);
@@ -186,7 +196,7 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 {
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
-    gchar *contact_name = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
+    char *participant = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
     g_strstrip(contact_name);
     if (contact_name[0] == '\0')
         return;
@@ -201,6 +211,19 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
 
     strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
 
+	char nom[32] = "nouvelle conversation";
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+	char payload[1056];
+	snprintf(payload,1056,"%s%s:",participant,u->u_pseudo);
+	query_t q = construire_message(CREATE,nom,payload);
+	envoyer_query(sock,&q);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("failed to create : %s\n",content[0]);
+		return;
+	}
+	printf("success created conversation : %s", content[0]);
+
     GtkWidget *listbox_item = gtk_button_new_with_label(contact_name);
     g_signal_connect(listbox_item, "clicked", G_CALLBACK(on_contact_clicked), NULL);
     gtk_list_box_insert(GTK_LIST_BOX(listbox), listbox_item, -1);
@@ -212,36 +235,39 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
     gtk_widget_show_all(chat_window);
 }
 
-void load_contacts_from_file()
+void maj()
 {
-    gchar filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
-    FILE *file = fopen(filePath, "r");
-    if (file != NULL)
-    {
-        gchar line[512];
-        gint line_count = 1;
-        while (fgets(line, sizeof(line), file) != NULL)
-        {
-            if (line_count > NB_LIGNES_INFOS)
-            {
-                gchar *contact_name = strtok(line, ";");
-                if (line_count == NB_LIGNES_INFOS + 1)
-                {
-                    strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
-                }
-                GtkWidget *button = gtk_button_new_with_label(contact_name);
-                gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
-                g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-            }
-            line_count++;
-        }
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    query_t q = construire_message(LOG,user->u_pseudo,user->password); 
+	envoyer_query(sock,&q);
+	int reponse = interpreter_message(sock,content);
+	
+	if(reponse == -1){
+		printf("failed to update");
+		return;
+	}
+	int incr = 0;
+	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
+		if(content[i] == NULL){
+			user->nb_conv = incr;
+			break;
+		}
+		printf("data %d: %s \n",i,content[i]);
+		strcpy(user->conversation[incr]->id_deconv, content[i]);
+		strcpy(user->conversation[incr]->nom, content[i + 1]);
+		incr++;
+	}
+}
 
-        fclose(file);
-    }
-    else
+void load_contacts()
+{
+    maj();
+    for(int i = 0; i < user->nb_conv; i++)
     {
-        printf("Error opening file %s\n", filePath);
+        GtkWidget *button = gtk_button_new_with_label(user->conversation[i]->nom);
+        gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
+        g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+    
     }
 }
 
@@ -294,7 +320,7 @@ void open_chat_window()
     listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
 
-    load_contacts_from_file();
+    load_contacts();
 
     // Création de la zone principale de chat à droite
     GtkWidget *chat_area = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -320,11 +346,6 @@ void open_chat_window()
     g_signal_connect(logout_button, "clicked", G_CALLBACK(logout), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), logout_button, FALSE, FALSE, 0);
 
-    // Création du bouton d'envoi de fichier
-    GtkWidget *file_button = gtk_button_new_with_label("Load File");
-    g_signal_connect(file_button, "clicked", G_CALLBACK(send_file), NULL);
-    gtk_box_pack_start(GTK_BOX(hbox2), file_button, FALSE, FALSE, 0);
-
     // Champ de saisie pour les messages
     chat_entry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(chat_entry), "Type your message here...");
@@ -348,7 +369,6 @@ void open_chat_window()
     gtk_widget_set_name(send_button, "send_button");
     gtk_widget_set_name(new_conv_button, "new_button");
     gtk_widget_set_name(logout_button, "logout_button");
-    gtk_widget_set_name(file_button, "file_button");
 
     // Appliquer le CSS à la fenêtre de connexion
     apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
@@ -359,44 +379,7 @@ void open_chat_window()
     start_message_reload_timer();
 }
 
-void to_hex_string(unsigned char *hash, char *output, size_t length)
-{
-    for (size_t i = 0; i < length; i++)
-    {
-        sprintf(output + (i * 2), "%02x", hash[i]);
-    }
-    output[length * 2] = '\0';
-}
-
-void write_login_to_file(const char *username, const char *password)
-{
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    char hex_string[SHA256_DIGEST_LENGTH * 2 + 1];
-
-    // Hachage du mot de passe
-    if (!SHA256((const unsigned char *)password, strlen(password), hash))
-    {
-        g_print("Erreur lors du hachage du mot de passe.\n");
-        return;
-    }
-
-    // Convertir le hash en chaîne hexadécimale
-    to_hex_string(hash, hex_string, sizeof(hash));
-
-    // Écrire le nom d'utilisateur et le hash du mot de passe dans le fichier
-    FILE *file = fopen("./database/login.txt", "a");
-    if (file != NULL)
-    {
-        fprintf(file, "%s;%s\n", username, hex_string);
-        fclose(file);
-    }
-    else
-    {
-        g_print("Erreur lors de l'ouverture du fichier.\n");
-    }
-}
-
-void submit_signin(GtkWidget *widget, gpointer data) //envoyer
+void submit_signin(GtkWidget *widget, gpointer data) // envoyer
 {
     // Obtenez le nom d'utilisateur et le mot de passe des entrées
     const char *username = g_strdup(gtk_entry_get_text(GTK_ENTRY(signin_username_entry)));
@@ -422,9 +405,6 @@ void submit_signin(GtkWidget *widget, gpointer data) //envoyer
         g_free(trimmed_lastname);
         return;
     }
-
-    // Écrivez le login dans le fichier
-    write_login_to_file(trimmed_username, trimmed_password);
 
     char filename[64];
     snprintf(filename, sizeof(filename), "./database/users/%s.txt", trimmed_username);
@@ -620,83 +600,9 @@ void open_login_window()
     gtk_widget_show_all(login_window);
 }
 
-int main(int argc, char *argv[])
-{
-    gtk_init(&argc, &argv);
-
-    open_login_window();
-
-    gtk_main();
-
-    return 0;
-}
-
-char rand_char()
-{
-    const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const size_t charset_size = sizeof(charset) - 1;
-    return charset[rand() % charset_size];
-}
-
-void generate_random_id(char *id, size_t size)
-{
-    srand(time(NULL));
-    for (size_t i = 0; i < size; ++i)
-    {
-        id[i] = rand_char();
-    }
-    id[size - 1] = '\0'; // Null-terminate the string
-}
-
-void create_new_conversation_file(const char *conv_name)
-{
-    char chat_id[37];
-    generate_random_id(chat_id, sizeof(chat_id));
-
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", chat_id);
-
-    FILE *file = fopen(filePath, "w");
-    if (file != NULL)
-    {
-        fclose(file);
-        char filePath[256];
-        printf("Creating conversation file: %s, %s\n", conv_name, user_name);
-        snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
-
-        FILE *file = fopen(filePath, "a");
-        if (file != NULL)
-        {
-            fprintf(file, "%s;%s\n", conv_name, chat_id);
-            fclose(file);
-        }
-        else
-        {
-            printf("Error appending data to %s\n", filePath);
-        }
-
-        snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", conv_name);
-
-        file = fopen(filePath, "a");
-        if (file != NULL)
-        {
-            fprintf(file, "%s;%s\n", user_name, chat_id);
-            fclose(file);
-        }
-        else
-        {
-            printf("Error appending data to %s\n", filePath);
-        }
-    }
-    else
-    {
-        printf("Error creating conversation file: %s\n", filePath);
-    }
-}
-
 void send_message(GtkWidget *widget, gpointer data)
 {
-    gchar *message = g_strdup(gtk_entry_get_text(GTK_ENTRY(chat_entry)));
+    char *message = g_strdup(gtk_entry_get_text(GTK_ENTRY(chat_entry)));
     g_strstrip(message);
     if (message[0] == '\0')
     {
@@ -708,33 +614,37 @@ void send_message(GtkWidget *widget, gpointer data)
         printf("Select a conversation\n");
         return;
     }
-    // Construction du message avec le nom de l'utilisateur
-    char full_message[512];
-    snprintf(full_message, sizeof(full_message), "%s: %s\n", user_name, message);
-
-    // Ajouter le message à la vue de chat
-    append_to_text_view(full_message);
-
-    char conversation_id[37];
-    if (!get_conversation_id(user_name, actual_conversation, conversation_id))
+    char *conv_id = malloc(37);
+    if(get_conversation_id(actual_conversation, conv_id) == FALSE)
     {
-        create_new_conversation_file(actual_conversation);
+        printf("Conversation not found\n");
         return;
     }
+	char * sizem = malloc(5);
+	char * payload = malloc(1032);
+	sprintf(sizem,"%d",(int)strlen(message));
+	snprintf(payload,1032,"%s:%s:",conv_id,sizem);
+	
+	query_t q;
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    printf("Sending message to %s\n", actual_conversation);
+    printf("Message: %s\n", message);
+	q = construire_message(SEND,user->u_pseudo,payload);
+	envoyer_query(sock,&q);
+	write(sock,message,(int)strlen(message));
 
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", conversation_id);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("Serveur had a problem : message ignored \n");
+		return;
+	}
+	printf("Serveur : ACK, message saved on serveur : %s\n",content[0]);
 
-    // Sauvegarder le message dans le fichier
-    FILE *file = fopen(filePath, "a");
-    if (file != NULL)
-    {
-        fputs(full_message, file);
-        fclose(file);
-    }
-
-    // Effacer le champ de saisie
+    load_chat_history(actual_conversation);
     gtk_entry_set_text(GTK_ENTRY(chat_entry), "");
+    free(message);
+	free(payload);
+    free(sizem);
 }
 
 void append_to_text_view(const gchar *text)
@@ -748,7 +658,7 @@ void append_to_text_view(const gchar *text)
     gtk_text_buffer_insert(buffer, &end_iter, text, -1);
 
     // Défilement automatique vers le bas en utilisant g_idle_add
-    g_idle_add(scroll_to_bottom, chat_view);
+    //g_idle_add(scroll_to_bottom, chat_view);
 }
 
 gboolean scroll_to_bottom(gpointer data)
@@ -763,78 +673,40 @@ gboolean scroll_to_bottom(gpointer data)
     return FALSE;
 }
 
-gboolean file_exists(const char *filename)
+gboolean get_conversation_id(char *partner_name, char *conversation_id)
 {
-    FILE *file = fopen(filename, "r");
-    if (file)
+    for (int i = 0; i < user->nb_conv; i++)
     {
-        fclose(file);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-gboolean get_conversation_id(const char *user_name, const char *partner_name, char *conversation_id)
-{
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/users/%s.txt", user_name);
-    FILE *file = fopen(filePath, "r");
-    if (!file)
-    {
-        return FALSE;
-    }
-
-    char line[512];
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
-        char *file_partner_name = strtok(line, ";");
-        char *file_conversation_id = strtok(NULL, "\n");
-
-        if (strcmp(file_partner_name, partner_name) == 0)
+        if (strcmp(user->conversation[i]->nom, partner_name) == 0)
         {
-            strcpy(conversation_id, file_conversation_id);
-            fclose(file);
+            strcpy(conversation_id, user->conversation[i]->id_deconv);
             return TRUE;
         }
     }
-
-    fclose(file);
     return FALSE;
 }
 
-void load_chat_history()
+void load_chat_history(char *contact_name)
 {
-    // Clear the chat view
+    query_t q;
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    char *conv_id = malloc(37);
+    printf("Loading chat history for %s\n", contact_name);
+    if (!get_conversation_id(contact_name, conv_id))
+    {
+        printf("Conversation not found\n");
+        return;
+    }
+    q = construire_message(UPDATE, user->u_pseudo, conv_id);
+    envoyer_query(sock, &q);
+    int rep = interpreter_message(sock, content);
+
+    if (rep == -1)
+    {
+        printf("failed to get reponse : maybe convo doesnt exist? \n");
+        return;
+    }
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     gtk_text_buffer_set_text(buffer, "", -1);
-
-    char conversation_id[37];
-    if (!get_conversation_id(user_name, actual_conversation, conversation_id))
-    {
-        return;
-    }
-
-    char filePath[256];
-    snprintf(filePath, sizeof(filePath), "./database/conversations/%s.txt", conversation_id);
-
-    if (access(filePath, F_OK) == -1)
-    {
-        printf("File %s not found.\n", filePath);
-        return;
-    }
-
-    FILE *file = fopen(filePath, "r");
-    if (file == NULL)
-    {
-        printf("Error opening file %s\n", filePath);
-        return;
-    }
-
-    char line[512];
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
-        append_to_text_view(line);
-    }
-
-    fclose(file);
+    append_to_text_view(content[0]);
 }

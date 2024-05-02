@@ -20,14 +20,13 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider);
 void hash_password(const char *password, char *hashed_password_hex);
 gboolean validate_login(const gchar *username, const gchar *password);
 void login(GtkWidget *widget, gpointer data);
-void send_file(GtkWidget *widget, gpointer data);
 void logout(GtkWidget *widget, gpointer data);
 void on_contact_clicked(GtkWidget *widget, gpointer data);
 gboolean is_contact_valid(const gchar *contact_name);
 gboolean reload_messages(gpointer user_data);
 void start_message_reload_timer();
 void create_new_conversation(GtkWidget *widget, gpointer data);
-void load_contacts_from_file();
+void load_contacts();
 void open_chat_window();
 void to_hex_string(unsigned char *hash, char *output, size_t length);
 void write_login_to_file(const char *username, const char *password);
@@ -41,7 +40,7 @@ void send_message(GtkWidget *widget, gpointer data);
 void append_to_text_view(const gchar *text);
 gboolean scroll_to_bottom(gpointer text_view);
 gboolean file_exists(const char *filename);
-gboolean get_conversation_id(const char* user_name, const char* partner_name, char* conversation_id);
+gboolean get_conversation_id(char* partner_name, char* conversation_id);
 void load_chat_history();
 
 // Déclarations des variables globales
