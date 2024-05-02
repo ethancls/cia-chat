@@ -15,7 +15,7 @@ ifeq ($(UNAME_S),Darwin) # Darwin is the system name for macOS
 endif
 
 TARGET := cia-chat
-TARGET_SRV := wcp_serv
+TARGET_SRV := wcp_srv
 SRCS := client.c wcp_clt.c
 SRCS_SRV := wcp_srv.c
 

@@ -1,5 +1,46 @@
 #include "./tcp_srv.h"
 
+/************************************************************************************************************************$****************/
+
+int main(int argc, char *argv[])
+{
+	sem_t sem;
+	sem_init(&sem, 0, 1);
+	printf("Serveur TCP\n");
+	masterDb_t *dbd = malloc(sizeof(masterDb_t));
+	dbd->User = malloc(sizeof(UserData_t *) * 128);
+	for (int i = 0; i < 128; i++)
+	{
+		dbd->User[i] = malloc(sizeof(UserData_t));
+	}
+	int kill = 0;
+	printf("socket\n");
+	int sock = creer_configurer_sock_ecoute(PORT_WCP); // creation socket listen
+
+	reload_database(dbd);
+	print_master(dbd);
+	while (1)
+	{
+		struct sockaddr_in sa_clt;
+		socklen_t sl = sizeof(sa_clt);
+		printf("en attente de connection\n");
+		int sctl = accept(sock, (struct sockaddr *)&sa_clt, &sl); // connection d'un client
+		struct sockaddr_in addr;
+		socklen_t addrlen = sizeof(addr);
+		getpeername(sock, (struct sockaddr *)&addr, &addrlen);
+		char ip_str[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+		printf("Connection from %s\n", ip_str);
+		work_args wa = {.dbd = dbd, .fd = sctl};
+		pthread_t threadw;
+		// Création du thread
+		pthread_create(&threadw, NULL, thread_worker, &wa); // lancement d'un thread pour un client
+		pthread_detach(threadw);							// le systeme peut recuperer les ressource quand le thread est fermer
+	}
+	close(sock);
+	return 0;
+}
+
 tokens_t convert_to_request(const char *str)
 {
 	if (strcmp(str, "LOG") == 0)
@@ -620,47 +661,6 @@ void reload_database(masterDb_t *dbd)
 	dbd->nbUser = index;
 	closedir(d);
 	// print_master(dbd);
-}
-
-/************************************************************************************************************************$****************/
-
-int main(int argc, char *argv[])
-{
-	sem_t sem;
-	sem_init(&sem, 0, 1);
-	printf("Serveur TCP\n");
-	masterDb_t *dbd = malloc(sizeof(masterDb_t));
-	dbd->User = malloc(sizeof(UserData_t *) * 128);
-	for (int i = 0; i < 128; i++)
-	{
-		dbd->User[i] = malloc(sizeof(UserData_t));
-	}
-	int kill = 0;
-	printf("socket\n");
-	int sock = creer_configurer_sock_ecoute(PORT_WCP); // creation socket listen
-
-	reload_database(dbd);
-	print_master(dbd);
-	while (1)
-	{
-		struct sockaddr_in sa_clt;
-		socklen_t sl = sizeof(sa_clt);
-		printf("en attente de connection\n");
-		int sctl = accept(sock, (struct sockaddr *)&sa_clt, &sl); // connection d'un client
-		struct sockaddr_in addr;
-		socklen_t addrlen = sizeof(addr);
-		getpeername(sock, (struct sockaddr *)&addr, &addrlen);
-		char ip_str[INET_ADDRSTRLEN];
-		inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
-		printf("Connection from %s\n", ip_str);
-		work_args wa = {.dbd = dbd, .fd = sctl};
-		pthread_t threadw;
-		// Création du thread
-		pthread_create(&threadw, NULL, thread_worker, &wa); // lancement d'un thread pour un client
-		pthread_detach(threadw);							// le systeme peut recuperer les ressource quand le thread est fermer
-	}
-	close(sock);
-	return 0;
 }
 
 void hash_password(char *password, char *hashed_password_hex)
