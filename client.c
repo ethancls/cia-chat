@@ -56,7 +56,8 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
 }
 
 void login(GtkWidget *widget, gpointer data)
-{
+{   
+    update = FALSE;
     char *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
     char *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
 
@@ -115,6 +116,7 @@ void login(GtkWidget *widget, gpointer data)
             incr++;
         }
         printf("*************************DATA LOADED***************************************\n");
+        update = TRUE;
     }
 }
 
@@ -174,8 +176,9 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
     strncpy(actual_conversation, conv_name, sizeof(actual_conversation) - 1);
 
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
-    char payload[1056];
+    char * payload = malloc(1056);
     snprintf(payload, 1056, "%s:%s:", contact_name, user->u_pseudo);
+    update = FALSE;
     query_t q = construire_message(CREATE, conv_name, payload);
     envoyer_query(sock, &q);
     int rep = interpreter_message(sock, content);
@@ -185,7 +188,7 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
     printf("success created conversation : %s", content[0]);
-
+    update = TRUE;
     gtk_entry_set_text(GTK_ENTRY(conv_name_entry), "");
     gtk_entry_set_text(GTK_ENTRY(contact_entry), "");
 
