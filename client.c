@@ -374,8 +374,8 @@ void open_chat_window()
     // Création du menu défilant à gauche
     GtkWidget *scroll_menu = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_menu), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_size_request(scroll_menu, 100, -1);                  // Ajustement de la largeur minimale du menu
-    gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, TRUE, TRUE, 0); // Ajout de la propriété expand à TRUE
+    gtk_widget_set_size_request(scroll_menu, 100, -1);
+    gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, FALSE, FALSE, 0);
 
     listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
@@ -389,7 +389,7 @@ void open_chat_window()
     // Zone de texte du chat avec défilement
     chat_view = gtk_text_view_new();
     gtk_widget_override_background_color(chat_view, GTK_STATE_FLAG_NORMAL, &(GdkRGBA){0.0, 0.0, 0.0, 1.0});
-    gtk_text_view_set_editable(GTK_TEXT_VIEW(chat_view), TRUE);
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(chat_view), FALSE);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(chat_view), FALSE);
     GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
