@@ -15,7 +15,12 @@ int main(int argc, char *argv[])
 
     printf("Connecting to %s\n", argv[1]);
     sock = creer_connecter_sock(argv[1], PORT_WCP);
-
+    if(sock == -1)
+    {
+        perror("Failed to connect to server");
+        return 1;
+    }
+    
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     if (getpeername(sock, (struct sockaddr *)&addr, &addrlen) == -1)
