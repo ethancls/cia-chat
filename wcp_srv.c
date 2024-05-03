@@ -19,26 +19,26 @@ int main(int argc, char *argv[])
 	print_master(dbd);
 	while (1)
 	{
-		struct sockaddr_in * sa_clt = malloc(sizeof(struct sockaddr_in));
+		struct sockaddr_in *sa_clt = malloc(sizeof(struct sockaddr_in));
 		socklen_t sl = sizeof(struct sockaddr_in);
 		printf("en attente de connection\n");
 		int sctl = accept(sock, (struct sockaddr *)sa_clt, &sl); // connection d'un client
-		struct sockaddr_in * addr = malloc(sizeof(struct sockaddr_in));
+		struct sockaddr_in *addr = malloc(sizeof(struct sockaddr_in));
 		socklen_t addrlen = sizeof(struct sockaddr_in);
 		getpeername(sctl, (struct sockaddr *)addr, &addrlen);
-		char * ip_str = malloc(INET_ADDRSTRLEN);
+		char *ip_str = malloc(INET_ADDRSTRLEN);
 		inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
 		printf("Connection from %s\n", ip_str);
-		work_args * wa = malloc(sizeof(work_args));
+		work_args *wa = malloc(sizeof(work_args));
 		wa->dbd = dbd;
 		wa->fd = sctl;
 		pthread_t threadw;
 		// Création du thread
 		pthread_create(&threadw, NULL, thread_worker, wa); // lancement d'un thread pour un client
-		pthread_detach(threadw);							// le systeme peut recuperer les ressource quand le thread est fermer
+		pthread_detach(threadw);						   // le systeme peut recuperer les ressource quand le thread est fermer
 
 		free(sa_clt);
-    	free(ip_str);
+		free(ip_str);
 	}
 	close(sock);
 	return 0;
@@ -102,6 +102,36 @@ tokens_t convert_to_request(const char *str)
 	{
 		return -1; // Indicate an error or handle unknown values accordingly
 	}
+}
+
+int is_contact_valid(char *contact_name)
+{
+	char line[256];
+	int valid = 0;
+	char *file_username;
+	char *saveptr;
+
+	FILE *file = fopen("./database/login.txt", "r");
+	if (file == NULL)
+	{
+		return -1;
+	}
+
+	while (fgets(line, sizeof(line), file) != NULL)
+	{
+		line[strcspn(line, "\r\n")] = 0;
+
+		file_username = strtok_r(line, ";", &saveptr);
+
+		if (strcmp(contact_name, file_username) == 0)
+		{
+			valid = -1;
+			break;
+		}
+	}
+	fclose(file);
+
+	return valid;
 }
 
 int read_until_nl(int fd, char *buf)
@@ -200,7 +230,7 @@ void *thread_worker(void *arg)
 		// printf("\n");
 		q.content = query_content;
 		q.size = size_query;
-		printf("Query received: %s\n\n", q.content);
+		printf("\nQuery received: %s\n", q.content);
 		serv_interpreter(&q, args->dbd, args->fd);
 		free(query_content);
 		n++;
@@ -471,7 +501,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("@CREATE\n");
 		char *user = strtok(payload, ":");
 		char *conversation = create_new_conversation_file(user);
-		if(addParticipant(conversation, username, user) == -1){
+		if (addParticipant(conversation, username, user) == -1)
+		{
 			rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant");
 			envoyer_query(socket, &rep);
 			break;
@@ -488,11 +519,20 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		break;
 	case SIGNIN:
 		printf("@SIGNIN\n");
-		write_login_to_file(username, payload);
-		rep = serv_construire_message(OK, username, "accepted");
-		envoyer_query(socket, &rep);
-		// OKS
-		// OKR
+		printf("is_contact_valid : %d\n", is_contact_valid(username));
+		if (is_contact_valid(username) == -1)
+		{
+			printf("Username already exists\n"),
+			rep = serv_construire_message(DENIED, "Username already exists", "E_12");
+			envoyer_query(socket, &rep);
+		}
+		else
+		{
+			printf("Creating account\n");
+			write_login_to_file(username, payload);
+			rep = serv_construire_message(OK, username, "Account created successfully");
+			envoyer_query(socket, &rep);
+		}
 		break;
 	case OK:
 		break;
@@ -572,7 +612,7 @@ char *create_new_conversation_file(char *conv_name)
 	FILE *file = fopen(filePath, "w");
 	if (file != NULL)
 	{
-		fprintf(file,"*******************(START OF NEW CONVERSATION)***************************\n");// evite le chat vide
+		fprintf(file, "*******************(START OF NEW CONVERSATION)***************************\n"); // evite le chat vide
 		fclose(file);
 	}
 	else
@@ -591,6 +631,10 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 	if (file == -1)
 	{
 		perror("open");
+		return -1;
+	}
+	if (is_contact_valid(participant) == -1)
+	{
 		return -1;
 	}
 

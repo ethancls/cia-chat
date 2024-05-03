@@ -140,50 +140,6 @@ void on_contact_clicked(GtkWidget *widget, gpointer data)
     load_chat_history(actual_conversation);
 }
 
-gboolean is_contact_valid(const gchar *contact_name)
-{
-    char line[256];
-    gboolean contact_found = TRUE;
-    gchar *file_username;
-    gchar *saveptr;
-
-    /*FILE *file = fopen("./database/login.txt", "r");
-    if (file == NULL)
-    {
-        return FALSE;
-    }
-
-    while (fgets(line, sizeof(line), file) != NULL)
-    {
-        line[strcspn(line, "\r\n")] = 0;
-
-        file_username = strtok_r(line, ";", &saveptr);
-
-        if (strcmp(contact_name, file_username) == 0)
-        {
-            contact_found = TRUE;
-            break;
-        }
-    }
-    fclose(file);*/
-
-    for (int i = 0; i < user->nb_conv; i++)
-    {
-        if (strcmp(user->conversation[i]->nom, contact_name) == 0)
-        {
-            contact_found = FALSE;
-            break;
-        }
-    }
-
-    if (user->u_pseudo == contact_name)
-    {
-        contact_found = FALSE;
-    }
-
-    return contact_found;
-}
-
 gboolean reload_messages(gpointer user_data)
 {
     if (update == TRUE)
@@ -214,14 +170,6 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
     g_strstrip(conv_name);
     if (contact_name[0] == '\0' || conv_name[0] == '\0')
         return;
-
-    // Vérifier si le contact est valide
-    if (!is_contact_valid(contact_name))
-    {
-        printf("Invalid contact name.\n");
-        gtk_entry_set_text(GTK_ENTRY(data), "");
-        return;
-    }
 
     strncpy(actual_conversation, conv_name, sizeof(actual_conversation) - 1);
 
@@ -374,8 +322,8 @@ void open_chat_window()
     // Création du menu défilant à gauche
     GtkWidget *scroll_menu = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_menu), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_size_request(scroll_menu, 100, -1);
-    gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, FALSE, FALSE, 0);
+    gtk_widget_set_size_request(scroll_menu, 50, -1);
+    gtk_box_pack_start(GTK_BOX(vbox_left), scroll_menu, TRUE, TRUE, 0);
 
     listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
@@ -471,22 +419,21 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
     envoyer_query(sock, &q);
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
     int reponse = interpreter_message(sock, content);
+    printf("reponse : %d\n", reponse);
     if (reponse == -1)
     {
         gtk_label_set_text(GTK_LABEL(error_label), "Username already exists");
         return;
     }
-    // Libérer la mémoire allouée pour les chaînes de caractères
-    g_free(trimmed_username);
-    g_free(trimmed_password);
-    g_free(trimmed_firstname);
-    g_free(trimmed_lastname);
-
-    // Fermer la fenêtre de Signin
-    gtk_widget_hide(signin_window);
-
-    // Afficher à nouveau la fenêtre de login
-    open_login_window();
+    else
+    {
+        gtk_label_set_text(GTK_LABEL(error_label), "Account created successfully");
+        g_free(trimmed_username);
+        g_free(trimmed_password);
+        g_free(trimmed_firstname);
+        g_free(trimmed_lastname);
+        return;
+    }
 }
 
 void exit_signin(GtkWidget *widget, gpointer data)
@@ -712,9 +659,11 @@ void append_to_text_view(const gchar *text)
 
     GHashTable *user_colors = g_hash_table_new(g_str_hash, g_str_equal);
 
-    gtk_text_buffer_create_tag(buffer, "white_text", "foreground", "white", "left_margin", 45, "family", "Arial", "pixels_below_lines", 8, NULL);
+    gtk_text_buffer_create_tag(buffer, "white_text", "foreground", "white", "left_margin", 35, "family", "Arial", "pixels_below_lines", 4, NULL);
 
     gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
+
+    gchar *last_username = NULL; // Stocke le dernier nom d'utilisateur
 
     gchar **lines = g_strsplit(text, "\n", -1);
     for (int i = 0; lines[i] != NULL; i++)
@@ -723,18 +672,18 @@ void append_to_text_view(const gchar *text)
         if (parts[0] && parts[1])
         {
             gchar *color_tag;
-            // Check if a color tag already exists for this user
+            // Vérifier si un tag de couleur existe déjà pour cet utilisateur
             if (!g_hash_table_contains(user_colors, parts[0]))
             {
-                // Assign new color if user does not have one
+                // Attribuer une nouvelle couleur si l'utilisateur n'en a pas déjà une
                 int color_index = g_hash_table_size(user_colors) % 10;
-                color_tag = g_strdup_printf("%s_message", colors[color_index]); // Simplified tag naming
+                color_tag = g_strdup_printf("%s_message", colors[color_index]);
                 g_hash_table_insert(user_colors, g_strdup(parts[0]), g_strdup(color_tag));
 
-                // Create a tag for the username with this new color only if it doesn't exist
+                // Créer un tag pour le nom d'utilisateur avec cette nouvelle couleur uniquement s'il n'existe pas
                 if (gtk_text_tag_table_lookup(gtk_text_buffer_get_tag_table(buffer), color_tag) == NULL)
                 {
-                    gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_HEAVY, "left_margin", 20, "right_margin", 10, "family", "Arial", "pixels_below_lines", 2, NULL);
+                    gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_HEAVY, "left_margin", 20, "right_margin", 10, "family", "Arial", "pixels_below_lines", 4, NULL);
                 }
             }
             else
@@ -742,23 +691,32 @@ void append_to_text_view(const gchar *text)
                 color_tag = g_hash_table_lookup(user_colors, parts[0]);
             }
 
-            // Format and insert the username
-            gchar *username_formatted = g_strdup_printf("%s\n", parts[0]);
-            GtkTextIter end_iter;
-            gtk_text_buffer_get_end_iter(buffer, &end_iter);
-            gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, username_formatted, -1, color_tag, NULL);
+            // Si c'est le même utilisateur qui écrit, on n'affiche pas son nom d'utilisateur
+            if (last_username == NULL || strcmp(last_username, parts[0]) != 0)
+            {
+                // Format et insertion du nom d'utilisateur
+                gchar *username_formatted = g_strdup_printf("%s\n", parts[0]);
+                gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, username_formatted, -1, color_tag, NULL);
+                g_free(username_formatted);
+            }
 
-            // Insert the message with white color
+            // Insertion du message avec la couleur blanche
             gchar *message_formatted = g_strdup_printf("%s\n", parts[1]);
             gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, message_formatted, -1, "white_text", NULL);
-            g_free(username_formatted);
             g_free(message_formatted);
+
+            // Mise à jour du nom d'utilisateur précédent
+            if (last_username != NULL)
+                g_free(last_username);
+            last_username = g_strdup(parts[0]);
         }
         g_strfreev(parts);
     }
     g_strfreev(lines);
 
     g_hash_table_destroy(user_colors);
+    if (last_username != NULL)
+        g_free(last_username);
 
     g_idle_add(scroll_to_bottom, chat_view);
 }
