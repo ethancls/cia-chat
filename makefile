@@ -4,7 +4,8 @@ CC := gcc
 ifeq ($(UNAME_S),Linux)
     CFLAGS := -w `pkg-config --cflags gtk+-3.0` -lpthread
     LDFLAGS := -L/usr/local/lib `pkg-config --libs gtk+-3.0` -lssl -lcrypto
-    PKG_MANAGER := sudo apt-get install
+    PKG_MANAGER := sudo apt-get install -y
+    PKG_UPDATE := sudo apt-get update
     REQUIRED_PKGS := libgtk-3-dev libssl-dev pkg-config
 endif
 ifeq ($(UNAME_S),Darwin)
@@ -29,8 +30,10 @@ $(TARGET_SRV):
 
 # Check if necessary libraries are installed and install them if they are not
 check-libs:
+	@echo "Updating package lists..."
+	@$(PKG_UPDATE)
 	@echo "Checking and installing necessary libraries..."
-	@$(PKG_MANAGER) $(REQUIRED_PKGS)
+	@$(PKG_MANAGER) $(REQUIRED_PKGS) || (echo "Installation failed, please check the availability of the packages." && exit 1)
 
 # Clean up
 clean:
