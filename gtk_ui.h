@@ -62,3 +62,4 @@ GtkWidget *conv_name_entry;
 GtkWidget *contact_entry;
 gchar actual_conversation[64];
 gchar user_name[64];
+gboolean update;

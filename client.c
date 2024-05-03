@@ -55,7 +55,7 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
-void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
+void login(GtkWidget *widget, gpointer data)
 {
     char *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
     char *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
@@ -94,6 +94,7 @@ void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
         printf("Logged in\n");
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
+        update = TRUE;
         open_chat_window();
 
         printf("*************************LOADING DATA***************************************\n");
@@ -119,21 +120,15 @@ void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
 
 void logout(GtkWidget *widget, gpointer data)
 {
-    // Reset UI elements
     gtk_entry_set_text(GTK_ENTRY(username_entry), "");
     gtk_entry_set_text(GTK_ENTRY(password_entry), "");
     gtk_label_set_text(GTK_LABEL(error_label), "");
 
-    // Clear and hide the chat window if it is open
-    if (chat_window != NULL)
-    {
-        gtk_widget_hide(chat_window);
-        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
-        gtk_text_buffer_set_text(buffer, "", -1); // Clear chat history
-    }
+    gtk_widget_hide(chat_window);
 
-    // Show the login window again
-    gtk_widget_show_all(login_window);
+    open_login_window();
+
+    update = FALSE;
 }
 
 void on_contact_clicked(GtkWidget *widget, gpointer data)
@@ -191,8 +186,11 @@ gboolean is_contact_valid(const gchar *contact_name)
 
 gboolean reload_messages(gpointer user_data)
 {
-    load_chat_history(actual_conversation);
-    load_contacts();
+    if (update == TRUE)
+    {
+        load_chat_history(actual_conversation);
+        load_contacts();
+    }
     return TRUE;
 }
 
@@ -202,7 +200,6 @@ void start_message_reload_timer()
     // Spécifiez l'intervalle en millisecondes
     const guint interval_milliseconds = 5000;
 
-    // Ajoutez une temporisation périodique avec l'intervalle spécifié
     g_timeout_add(interval_milliseconds, reload_messages, NULL);
 }
 
@@ -391,7 +388,8 @@ void open_chat_window()
 
     // Zone de texte du chat avec défilement
     chat_view = gtk_text_view_new();
-    gtk_text_view_set_editable(GTK_TEXT_VIEW(chat_view), FALSE);
+    gtk_widget_override_background_color(chat_view, GTK_STATE_FLAG_NORMAL, &(GdkRGBA){0.1, 0.1, 0.1, 1.0});
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(chat_view), TRUE);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(chat_view), FALSE);
     GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -713,45 +711,35 @@ void send_message(GtkWidget *widget, gpointer data)
 
 void append_to_text_view(const gchar *text)
 {
-    // Define and load CSS
-    const gchar *css = "textview {"
-                       "  background-color: #F0F0F0;"
-                       "  font-family: 'Sans Serif';"
-                       "  font-size: 12px;"
-                       "}";
-    GtkCssProvider *provider = gtk_css_provider_new();
-    gtk_css_provider_load_from_data(provider, css, -1, NULL);
-
-    // Apply CSS to the chat_view
-    GtkStyleContext *context = gtk_widget_get_style_context(chat_view);
-    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
-
-
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     GtkTextIter end_iter;
     gtk_text_buffer_get_end_iter(buffer, &end_iter);
-    const gchar *colors[10] = {"darkblue", "orange", "blue", "red", "purple", "cyan", "magenta", "lime", "pink", "teal"};
+    const gchar *colors[10] = {"gray", "orange", "blue", "red", "purple", "cyan", "magenta", "lime", "pink", "teal"};
 
     GHashTable *user_colors = g_hash_table_new(g_str_hash, g_str_equal);
 
     gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
 
-    gchar **lines = g_strsplit(text, "\n", -1); // Split text into lines
+    gchar **lines = g_strsplit(text, "\n", -1);
     for (int i = 0; lines[i] != NULL; i++)
     {
-        gchar **parts = g_strsplit(lines[i], ":", 2); // Split each line into username and message
+        gchar **parts = g_strsplit(lines[i], ":", 2);
         if (parts[0] && parts[1])
         {
             gchar *color_tag;
+            // Check if a color tag already exists for this user
             if (!g_hash_table_contains(user_colors, parts[0]))
             {
                 // Assign new color if user does not have one
-                int color_index = g_hash_table_size(user_colors) % 10; // Rotate through colors if more than 10 users
-                color_tag = g_strdup_printf("%s_message", colors[color_index]);
+                int color_index = g_hash_table_size(user_colors) % 10;
+                color_tag = g_strdup_printf("%s_message", colors[color_index]); // Simplified tag naming
                 g_hash_table_insert(user_colors, g_strdup(parts[0]), g_strdup(color_tag));
 
-                // Create a tag for the username and message with this new color
-                gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_BOLD, "left_margin", 10, "right_margin", 10, NULL);
+                // Create a tag for the username with this new color only if it doesn't exist
+                if (gtk_text_tag_table_lookup(gtk_text_buffer_get_tag_table(buffer), color_tag) == NULL)
+                {
+                    gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_BOLD, "left_margin", 10, "right_margin", 10, NULL);
+                }
             }
             else
             {
@@ -760,6 +748,8 @@ void append_to_text_view(const gchar *text)
 
             // Format and insert the username
             gchar *username_formatted = g_strdup_printf("%s: ", parts[0]);
+            GtkTextIter end_iter;
+            gtk_text_buffer_get_end_iter(buffer, &end_iter);
             gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, username_formatted, -1, color_tag, NULL);
 
             // Insert the message
@@ -773,7 +763,6 @@ void append_to_text_view(const gchar *text)
 
     g_hash_table_destroy(user_colors);
 
-    // Automatic scrolling
     g_idle_add(scroll_to_bottom, chat_view);
 }
 

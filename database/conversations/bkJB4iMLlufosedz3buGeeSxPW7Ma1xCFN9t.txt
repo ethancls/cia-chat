@@ -16,3 +16,5 @@ ethan : vrfrf
 ethan : f
 ethan : frf
 ethan : rf
+ethan : salut
+ethan : salam
