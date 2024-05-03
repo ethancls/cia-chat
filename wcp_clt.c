@@ -454,7 +454,6 @@ int interpreter_message(int fd,char ** dataRet)
 		}
 		indexConv++;
 		dataRet[indexConv] = NULL;
-		
 		return 0;
 		break;
 	case LOG_FAILED:
@@ -470,7 +469,7 @@ int interpreter_message(int fd,char ** dataRet)
 		read(fd, data, size_buffer);
 		//printf("%s\n", data);
 		dataRet[0] = data;
-
+		dataRet[1] = NULL;
 		break;
 	case CONV: // DEPRECATED
 		printf("@CONV\n");
@@ -479,11 +478,15 @@ int interpreter_message(int fd,char ** dataRet)
 	case DENIED:
 		printf("@DENIED_RECEIVED\n");
 		dataRet[0] = payload;
+		dataRet[1] = NULL;
 		return -1;
+		break;
 	case OK:
 		printf("@OK_RECEIVED\n");
 		dataRet[0] = payload;
+		dataRet[1] = NULL;
 		return 0;
+		break;
 	default:
 		return -1;
 		break;

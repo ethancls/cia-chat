@@ -56,7 +56,7 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
 }
 
 void login(GtkWidget *widget, gpointer data)
-{   
+{
     update = FALSE;
     char *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
     char *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
@@ -95,25 +95,32 @@ void login(GtkWidget *widget, gpointer data)
         printf("Logged in\n");
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
-        update = TRUE;
         open_chat_window();
 
         printf("*************************LOADING DATA***************************************\n");
-        int incr = 0;
-        for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+        if (dataBuffer[0] == NULL)
         {
-            if (dataBuffer[i] == NULL)
+            printf("No data loaded\n");
+            user->nb_conv = 0;
+        }
+        else
+        {
+            int incr = 0;
+            for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
             {
-                user->nb_conv = incr;
-                break;
+                if (dataBuffer[i] == NULL)
+                {
+                    user->nb_conv = incr;
+                    break;
+                }
+                printf("id %d: %s ", i, dataBuffer[i]);
+                // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
+                strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
+                // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+                strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
+                printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
+                incr++;
             }
-            printf("id %d: %s ", i, dataBuffer[i]);
-            // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
-            strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
-            // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
-            strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
-            printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
-            incr++;
         }
         printf("*************************DATA LOADED***************************************\n");
         update = TRUE;
@@ -156,14 +163,13 @@ gboolean reload_messages(gpointer user_data)
 void start_message_reload_timer()
 {
     // Spécifiez l'intervalle en millisecondes
-    const guint interval_milliseconds = 5000;
+    const guint interval_milliseconds = 2000;
 
     g_timeout_add(interval_milliseconds, reload_messages, NULL);
 }
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
 {
-
     char *conv_name = gtk_entry_get_text(GTK_ENTRY(conv_name_entry));
 
     char *contact_name = gtk_entry_get_text(GTK_ENTRY(contact_entry));
@@ -176,7 +182,7 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
     strncpy(actual_conversation, conv_name, sizeof(actual_conversation) - 1);
 
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
-    char * payload = malloc(1056);
+    char *payload = malloc(1056);
     snprintf(payload, 1056, "%s:%s:", contact_name, user->u_pseudo);
     update = FALSE;
     query_t q = construire_message(CREATE, conv_name, payload);
@@ -188,37 +194,45 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
     printf("success created conversation : %s", content[0]);
-    update = TRUE;
     gtk_entry_set_text(GTK_ENTRY(conv_name_entry), "");
     gtk_entry_set_text(GTK_ENTRY(contact_entry), "");
-
+    update = TRUE;
     load_contacts();
 }
 
 void maj()
 {
-    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
-    query_t q = construire_message(LOG, user->u_pseudo, user->password);
-    envoyer_query(sock, &q);
-    int reponse = interpreter_message(sock, content);
-
-    if (reponse == -1)
+    if (update == FALSE)
     {
-        printf("failed to update");
         return;
     }
-    int incr = 0;
-    for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+    else
     {
-        if (content[i] == NULL)
+        printf("******MAJ******\n");
+        char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+        query_t q = construire_message(LOG, user->u_pseudo, user->password);
+        envoyer_query(sock, &q);
+        int reponse = interpreter_message(sock, content);
+
+        if (reponse == -1)
         {
-            user->nb_conv = incr;
-            break;
+            printf("failed to update");
+            return;
         }
-        printf("data %d: %s \n", i, content[i]);
-        strcpy(user->conversation[incr]->id_deconv, content[i]);
-        strcpy(user->conversation[incr]->nom, content[i + 1]);
-        incr++;
+        int incr = 0;
+        for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+        {
+            if (content[i] == NULL)
+            {
+                user->nb_conv = incr;
+                break;
+            }
+            printf("data %d: %s \n", i, content[i]);
+            strcpy(user->conversation[incr]->id_deconv, content[i]);
+            strcpy(user->conversation[incr]->nom, content[i + 1]);
+            incr++;
+        }
+        printf("*******MAJ FINISHED*******\n");
     }
 }
 
@@ -319,6 +333,8 @@ void open_chat_window()
     // Reduce the width allocation by not allowing expansion
     gtk_box_pack_start(GTK_BOX(hbox_conv), new_conv_button, FALSE, FALSE, 0);
 
+    g_signal_connect(contact_entry, "activate", G_CALLBACK(create_new_conversation), NULL);
+
     // Ajouter hbox_conv à vbox_left
     gtk_box_pack_start(GTK_BOX(vbox_left), hbox_conv, FALSE, FALSE, 0);
 
@@ -330,6 +346,8 @@ void open_chat_window()
 
     listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(scroll_menu), listbox);
+
+    update = TRUE;
 
     load_contacts();
 
@@ -417,7 +435,7 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
         g_free(trimmed_lastname);
         return;
     }
-
+    update = FALSE;
     query_t q = construire_message(SIGNIN, trimmed_username, trimmed_password);
     envoyer_query(sock, &q);
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
@@ -431,12 +449,12 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
     else
     {
         gtk_label_set_text(GTK_LABEL(error_label), "Account created successfully");
-        g_free(trimmed_username);
-        g_free(trimmed_password);
-        g_free(trimmed_firstname);
-        g_free(trimmed_lastname);
         return;
     }
+    g_free(trimmed_username);
+    g_free(trimmed_password);
+    g_free(trimmed_firstname);
+    g_free(trimmed_lastname);
 }
 
 void exit_signin(GtkWidget *widget, gpointer data)
@@ -658,7 +676,7 @@ void append_to_text_view(const gchar *text)
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     GtkTextIter end_iter;
     gtk_text_buffer_get_end_iter(buffer, &end_iter);
-    const gchar *colors[10] = {"lime", "orange", "blue", "red", "purple", "cyan", "magenta", "green", "pink", "teal"};
+    const gchar *colors[10] = {"red", "cyan", "lime", "orange", "purple", "cyan", "magenta", "green", "pink", "teal"};
 
     GHashTable *user_colors = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -721,30 +739,23 @@ void append_to_text_view(const gchar *text)
     if (last_username != NULL)
         g_free(last_username);
 
-    g_idle_add(scroll_to_bottom, chat_view);
-}
+    // Create a mark at the end of the buffer with right gravity (FALSE)
+    GtkTextMark *end_mark = gtk_text_buffer_create_mark(buffer, NULL, &end_iter, FALSE);
 
-gboolean scroll_to_bottom(gpointer data)
-{
-    GtkTextView *text_view = GTK_TEXT_VIEW(data);
-    GtkAdjustment *adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(text_view));
+    // Get the vertical adjustment to check the scroll position
+    GtkAdjustment *adj = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(chat_view));
+    gdouble upper = gtk_adjustment_get_upper(adj);
+    gdouble page_size = gtk_adjustment_get_page_size(adj);
+    gdouble value = gtk_adjustment_get_value(adj);
 
-    gdouble lower, upper, page_size, page_increment, value;
-    lower = gtk_adjustment_get_lower(adjustment);
-    upper = gtk_adjustment_get_upper(adjustment);
-    page_size = gtk_adjustment_get_page_size(adjustment);
-    value = gtk_adjustment_get_value(adjustment);
-
-    // Check if the scrollbar is at the bottom
-    if (value + page_size != upper)
-    {
-        // User is not at the bottom; do not scroll
-        return FALSE;
+    // Check if the user is near the bottom of the text view
+    if (value + page_size >= upper - 100)
+    { // Adjusting this threshold if needed
+        gtk_text_view_scroll_to_mark(chat_view, end_mark, 0.0, FALSE, 1.0, 1.0);
     }
 
-    // Scroll to bottom
-    gtk_adjustment_set_value(adjustment, upper - page_size);
-    return FALSE; // Return FALSE so g_idle_add() won't call this function again
+    // Clean up: remove the mark after use
+    gtk_text_buffer_delete_mark(buffer, end_mark);
 }
 
 gboolean get_conversation_id(char *partner_name, char *conversation_id)

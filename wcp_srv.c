@@ -106,7 +106,7 @@ tokens_t convert_to_request(const char *str)
 
 int is_contact_valid(char *contact_name)
 {
-	char line[256];
+	char * line = malloc(sizeof(char) * 256);
 	int valid = 0;
 	char *file_username;
 	char *saveptr;
@@ -116,21 +116,19 @@ int is_contact_valid(char *contact_name)
 	{
 		return -1;
 	}
-
 	while (fgets(line, sizeof(line), file) != NULL)
 	{
 		line[strcspn(line, "\r\n")] = 0;
 
 		file_username = strtok_r(line, ";", &saveptr);
 
-		if (strcmp(contact_name, file_username) == 0)
+		if (file_username != NULL && strcmp(contact_name, file_username) == 0)
 		{
 			valid = -1;
 			break;
 		}
 	}
 	fclose(file);
-
 	return valid;
 }
 
@@ -294,7 +292,8 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
-		write_query_end(&query, " \\\n");
+		write_query_end(&query, " ");
+		write_query_end(&query, "\n");
 
 		break;
 	case LOG_FAILED: // LOG_FAILED <NomUtilisateur>
@@ -313,6 +312,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
+		break;
 
 	case OK: // OK <Info>
 		write_query_end(&query, "OK ");
@@ -351,7 +351,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 
 	char *TOK = malloc(sizeof(char) * 128);
 	char *username = malloc(sizeof(char) * 128);
-	char *payload = malloc(sizeof(char) * 2048);
+	char *payload = malloc(sizeof(char) * 1024);
 	printf("content : %s\n", q->content);
 	sscanf(q->content, "%s %s %s", TOK, username, payload);
 	printf("*********INTERPRETER***********\n");
@@ -612,7 +612,7 @@ char *create_new_conversation_file(char *conv_name)
 	FILE *file = fopen(filePath, "w");
 	if (file != NULL)
 	{
-		fprintf(file, "*******************(START OF NEW CONVERSATION)***************************\n"); // evite le chat vide
+		fprintf(file, "cia:\n"); // evite le chat vide
 		fclose(file);
 	}
 	else
@@ -631,10 +631,6 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 	if (file == -1)
 	{
 		perror("open");
-		return -1;
-	}
-	if (is_contact_valid(participant) == -1)
-	{
 		return -1;
 	}
 
