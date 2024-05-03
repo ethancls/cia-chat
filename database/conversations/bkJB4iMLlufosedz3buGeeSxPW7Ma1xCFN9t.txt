@@ -18,3 +18,6 @@ ethan : frf
 ethan : rf
 ethan : salut
 ethan : salam
+ethan : coucou
+ethan : coucou
+ethan : coucou

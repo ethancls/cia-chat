@@ -388,7 +388,7 @@ void open_chat_window()
 
     // Zone de texte du chat avec défilement
     chat_view = gtk_text_view_new();
-    gtk_widget_override_background_color(chat_view, GTK_STATE_FLAG_NORMAL, &(GdkRGBA){0.1, 0.1, 0.1, 1.0});
+    gtk_widget_override_background_color(chat_view, GTK_STATE_FLAG_NORMAL, &(GdkRGBA){0.0, 0.0, 0.0, 1.0});
     gtk_text_view_set_editable(GTK_TEXT_VIEW(chat_view), TRUE);
     gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(chat_view), FALSE);
     GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -467,21 +467,15 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
         return;
     }
 
-    char filename[64];
-    snprintf(filename, sizeof(filename), "./database/users/%s.txt", trimmed_username);
-
-    FILE *file = fopen(filename, "w");
-    if (file != NULL)
+    query_t q = construire_message(SIGNIN, trimmed_username, trimmed_password);
+    envoyer_query(sock, &q);
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    int reponse = interpreter_message(sock, content);
+    if (reponse == -1)
     {
-        fprintf(file, "Firstname: %s\n", trimmed_firstname);
-        fprintf(file, "Lastname: %s\n", trimmed_lastname);
-        fclose(file);
+        gtk_label_set_text(GTK_LABEL(error_label), "Username already exists");
+        return;
     }
-    else
-    {
-        printf("Error: Unable to create file\n");
-    }
-
     // Libérer la mémoire allouée pour les chaînes de caractères
     g_free(trimmed_username);
     g_free(trimmed_password);
@@ -714,9 +708,11 @@ void append_to_text_view(const gchar *text)
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     GtkTextIter end_iter;
     gtk_text_buffer_get_end_iter(buffer, &end_iter);
-    const gchar *colors[10] = {"gray", "orange", "blue", "red", "purple", "cyan", "magenta", "lime", "pink", "teal"};
+    const gchar *colors[10] = {"lime", "orange", "blue", "red", "purple", "cyan", "magenta", "green", "pink", "teal"};
 
     GHashTable *user_colors = g_hash_table_new(g_str_hash, g_str_equal);
+
+    gtk_text_buffer_create_tag(buffer, "white_text", "foreground", "white", "left_margin", 45, "family", "Arial", "pixels_below_lines", 8, NULL);
 
     gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
 
@@ -738,7 +734,7 @@ void append_to_text_view(const gchar *text)
                 // Create a tag for the username with this new color only if it doesn't exist
                 if (gtk_text_tag_table_lookup(gtk_text_buffer_get_tag_table(buffer), color_tag) == NULL)
                 {
-                    gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_BOLD, "left_margin", 10, "right_margin", 10, NULL);
+                    gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_HEAVY, "left_margin", 20, "right_margin", 10, "family", "Arial", "pixels_below_lines", 2, NULL);
                 }
             }
             else
@@ -747,15 +743,16 @@ void append_to_text_view(const gchar *text)
             }
 
             // Format and insert the username
-            gchar *username_formatted = g_strdup_printf("%s: ", parts[0]);
+            gchar *username_formatted = g_strdup_printf("%s\n", parts[0]);
             GtkTextIter end_iter;
             gtk_text_buffer_get_end_iter(buffer, &end_iter);
             gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, username_formatted, -1, color_tag, NULL);
 
-            // Insert the message
-            gtk_text_buffer_insert(buffer, &end_iter, parts[1], -1);
-            gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
+            // Insert the message with white color
+            gchar *message_formatted = g_strdup_printf("%s\n", parts[1]);
+            gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, message_formatted, -1, "white_text", NULL);
             g_free(username_formatted);
+            g_free(message_formatted);
         }
         g_strfreev(parts);
     }
