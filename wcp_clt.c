@@ -417,6 +417,7 @@ int interpreter_message(int fd,char ** dataRet)
 	char *TOK = malloc(sizeof(char) * 16);
 	char *info = malloc(sizeof(char) * 48);
 	char *payload = malloc(sizeof(char) * 2048);
+	payload[0] = '\0';
 	sscanf(content, "%s %s %s", TOK, info, payload);
 	tokens_t r = convert_to_request(TOK);
 	//printf("token = %d\n", r);
@@ -425,7 +426,10 @@ int interpreter_message(int fd,char ** dataRet)
 	{
 	case LOG_OK:
 		printf("@LOGIN_OK\n");
-		
+		if(strlen(payload) < 1){
+			dataRet[0] = NULL;
+			break;
+		}
 		char *idConv = strtok(payload, ":");
 		if(idConv == NULL){
 			dataRet[0] = NULL;
