@@ -73,6 +73,7 @@ typedef enum tokens
 /* Prototypes de fonctions */
 
 void usage(char *nom_prog);
+void maj();
 int creer_connecter_sock(char *addr_ipv4, uint16_t port);
 void write_query_end(query_t *q, char *wr);
 void envoyer_query(int fd, query_t *q);
