@@ -75,7 +75,7 @@ void login(GtkWidget *widget, gpointer data)
     {
         user->conversation[i] = malloc(sizeof(convo_t));
         user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
-        user->conversation[i]->nom = malloc(32);
+        user->conversation[i]->nom = malloc(CONTENT_MAX_SIZE);
     }
 
     printf("Logging in as %s\n", user->u_pseudo);
@@ -98,37 +98,11 @@ void login(GtkWidget *widget, gpointer data)
     else
     {
         printf("Logged in\n");
+        update = TRUE;
+        maj();
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
         open_chat_window();
-
-        printf("*************************LOADING DATA***************************************\n");
-        if (dataBuffer[0] == NULL)
-        {
-            printf("No data loaded\n");
-            user->nb_conv = 0;
-        }
-        else
-        {
-            int incr = 0;
-            for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
-            {
-                if (dataBuffer[i] == NULL)
-                {
-                    user->nb_conv = incr;
-                    break;
-                }
-                printf("id %d: %s ", i, dataBuffer[i]);
-                // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
-                strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
-                // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
-                strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
-                printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
-                incr++;
-            }
-        }
-        printf("*************************DATA LOADED***************************************\n");
-        update = TRUE;
     }
 }
 
@@ -199,6 +173,8 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
     printf("success created conversation : %s", content[0]);
+    free(content[0]);
+    content[0] = NULL;
     gtk_entry_set_text(GTK_ENTRY(conv_name_entry), "");
     gtk_entry_set_text(GTK_ENTRY(contact_entry), "");
     update = TRUE;
@@ -214,18 +190,18 @@ void maj()
     else
     {
         printf("******MAJ******\n");
-        char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+        char **content = malloc(sizeof(char *) * CONTENT_MAX_NB * 2);
         query_t q = construire_message(LOG, user->u_pseudo, user->password);
         envoyer_query(sock, &q);
         int reponse = interpreter_message(sock, content);
-
+        user->nb_conv = 0;
         if (reponse == -1)
         {
             printf("failed to update");
             return;
         }
         int incr = 0;
-        for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+        for (int i = 0; i < CONTENT_MAX_NB * 2; i = i + 2)
         {
             if (content[i] == NULL)
             {
@@ -238,6 +214,8 @@ void maj()
             incr++;
         }
         printf("*******MAJ FINISHED*******\n");
+        free(content[0]);
+        free(content);
     }
 }
 
@@ -411,7 +389,7 @@ void open_chat_window()
     // Affichage de tous les widgets
     gtk_widget_show_all(chat_window);
 
-    start_message_reload_timer();
+    //start_message_reload_timer();
 }
 
 void submit_signin(GtkWidget *widget, gpointer data) // envoyer
@@ -443,7 +421,7 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
     update = FALSE;
     query_t q = construire_message(SIGNIN, trimmed_username, trimmed_password);
     envoyer_query(sock, &q);
-    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    char **content = malloc(sizeof(char *) * 2);
     int reponse = interpreter_message(sock, content);
     printf("reponse : %d\n", reponse);
     if (reponse == -1)
@@ -456,6 +434,9 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
         gtk_label_set_text(GTK_LABEL(error_label), "Account created successfully");
         return;
     }
+     if(content[0] != NULL)
+        free(content[0]);
+    free(content);
     g_free(trimmed_username);
     g_free(trimmed_password);
     g_free(trimmed_firstname);
@@ -652,9 +633,9 @@ void send_message(GtkWidget *widget, gpointer data)
     char *payload = malloc(1032);
     sprintf(sizem, "%d", (int)strlen(message) + 1);
     snprintf(payload, 1032, "%s:%s:", conv_id, sizem);
-
+    
     query_t q;
-    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    char **content = malloc(sizeof(char *) * 2);
     printf("Sending message to %s\n", actual_conversation);
     printf("Message: %s\n", message);
     q = construire_message(SEND, user->u_pseudo, payload);
@@ -670,7 +651,11 @@ void send_message(GtkWidget *widget, gpointer data)
     printf("Serveur : ACK, message saved on serveur : %s\n", content[0]);
 
     load_chat_history(actual_conversation);
+    if(content[0] != NULL)
+        free(content[0]);
+    free(content);
     gtk_entry_set_text(GTK_ENTRY(chat_entry), "");
+    free(conv_id);
     free(message);
     free(payload);
     free(sizem);
@@ -779,7 +764,7 @@ gboolean get_conversation_id(char *partner_name, char *conversation_id)
 void load_chat_history(char *contact_name)
 {
     query_t q;
-    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    char **content = malloc(sizeof(char *) * 2);
     char *conv_id = malloc(37);
     printf("Loading chat history for %s\n", contact_name);
     if (!get_conversation_id(contact_name, conv_id))
@@ -799,4 +784,8 @@ void load_chat_history(char *contact_name)
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     gtk_text_buffer_set_text(buffer, "", -1);
     append_to_text_view(content[0]);
+    free(conv_id);
+    if(content[0] != NULL)
+        free(content[0]);
+    free(content);
 }

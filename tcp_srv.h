@@ -33,6 +33,7 @@
 #define MAX_USER_NAME_LENGH 32
 #define MAX_CONVERSATIONS_PER_USER 64
 #define MAX_USERS 128
+#define MAX_INFO_SIZE 38
 
 /* Définition des chemins d'accès aux fichiers */
 const char *PATH_USER = "./database/users";

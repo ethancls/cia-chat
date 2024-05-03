@@ -2,7 +2,9 @@ UNAME_S := $(shell uname -s)
 
 CC := gcc
 ifeq ($(UNAME_S),Linux)
-    CFLAGS := -w `pkg-config --cflags gtk+-3.0` -lpthread -O3
+
+    CFLAGS := -w `pkg-config --cflags gtk+-3.0` -lpthread -g -O3
+
     LDFLAGS := -L/usr/local/lib `pkg-config --libs gtk+-3.0` -lssl -lcrypto
     PKG_MANAGER := sudo apt-get install -y
     PKG_UPDATE := sudo apt-get update
@@ -20,7 +22,7 @@ TARGET_SRV := wcp_srv
 SRCS := client.c wcp_clt.c
 SRCS_SRV := wcp_srv.c
 
-all: check-libs $(TARGET) $(TARGET_SRV)
+all: check-libs clean $(TARGET) $(TARGET_SRV)
 
 $(TARGET):
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $(TARGET)
