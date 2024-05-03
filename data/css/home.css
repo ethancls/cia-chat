@@ -25,6 +25,7 @@
 }
 
 #chat_entry,
+#conv_name_entry,
 #contact_entry {
     background-color: #000000;
     color: #ffffff;

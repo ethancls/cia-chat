@@ -33,15 +33,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    user = malloc(sizeof(user_t));
-    user->conversation = malloc(sizeof(convo_t *) * CONTENT_MAX_NB);
-    for (int i = 0; i < CONTENT_MAX_NB; i++)
-    {
-        user->conversation[i] = malloc(sizeof(convo_t));
-        user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
-        user->conversation[i]->nom = malloc(32);
-    }
-
     printf("Connected to %s\n", ip_str);
 
     gtk_init(&argc, &argv);
@@ -69,8 +60,17 @@ void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
     char *username = gtk_entry_get_text(GTK_ENTRY(username_entry));
     char *password = gtk_entry_get_text(GTK_ENTRY(password_entry));
 
+    user = malloc(sizeof(user_t));
+    user->nb_conv = 0;
     user->u_pseudo = username;
     user->password = password;
+    user->conversation = malloc(sizeof(convo_t *) * CONTENT_MAX_NB);
+    for (int i = 0; i < CONTENT_MAX_NB; i++)
+    {
+        user->conversation[i] = malloc(sizeof(convo_t));
+        user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
+        user->conversation[i]->nom = malloc(32);
+    }
 
     printf("Logging in as %s\n", user->u_pseudo);
     printf("Password: %s\n", user->password);
@@ -84,25 +84,6 @@ void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
     printf("Sent login query\n");
     int reponse = interpreter_message(sock, dataBuffer);
 
-    printf("*************************LOADING DATA***************************************\n");
-    int incr = 0;
-    for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
-    {
-        if (dataBuffer[i] == NULL)
-        {
-            user->nb_conv = incr;
-            break;
-        }
-        printf("id %d: %s ", i, dataBuffer[i]);
-        // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
-        strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
-        // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
-        strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
-        printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
-        incr++;
-    }
-    printf("*************************DATA LOADED***************************************\n");
-
     if (reponse == -1)
     {
         gtk_label_set_text(GTK_LABEL(error_label), "Invalid username or password");
@@ -114,19 +95,44 @@ void login(GtkWidget *widget, gpointer data) // envoyer token au serveur
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
         open_chat_window();
+
+        printf("*************************LOADING DATA***************************************\n");
+        int incr = 0;
+        for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+        {
+            if (dataBuffer[i] == NULL)
+            {
+                user->nb_conv = incr;
+                break;
+            }
+            printf("id %d: %s ", i, dataBuffer[i]);
+            // user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
+            strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
+            // printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+            strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
+            printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
+            incr++;
+        }
+        printf("*************************DATA LOADED***************************************\n");
     }
 }
 
-void logout(GtkWidget *widget, gpointer data) // envoyer logout seveur
+void logout(GtkWidget *widget, gpointer data)
 {
-    // Cache la fenêtre de chat
-    gtk_widget_hide(chat_window);
-
-    // Réinitialise les champs de saisie de l'écran de connexion
+    // Reset UI elements
     gtk_entry_set_text(GTK_ENTRY(username_entry), "");
     gtk_entry_set_text(GTK_ENTRY(password_entry), "");
+    gtk_label_set_text(GTK_LABEL(error_label), "");
 
-    // Affiche la fenêtre de connexion
+    // Clear and hide the chat window if it is open
+    if (chat_window != NULL)
+    {
+        gtk_widget_hide(chat_window);
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
+        gtk_text_buffer_set_text(buffer, "", -1); // Clear chat history
+    }
+
+    // Show the login window again
     gtk_widget_show_all(login_window);
 }
 
@@ -142,11 +148,11 @@ void on_contact_clicked(GtkWidget *widget, gpointer data)
 gboolean is_contact_valid(const gchar *contact_name)
 {
     char line[256];
-    gboolean contact_found = FALSE;
+    gboolean contact_found = TRUE;
     gchar *file_username;
     gchar *saveptr;
 
-    FILE *file = fopen("./database/login.txt", "r");
+    /*FILE *file = fopen("./database/login.txt", "r");
     if (file == NULL)
     {
         return FALSE;
@@ -164,9 +170,9 @@ gboolean is_contact_valid(const gchar *contact_name)
             break;
         }
     }
-    fclose(file);
+    fclose(file);*/
 
-    for(int i = 0; i < user->nb_conv; i++)
+    for (int i = 0; i < user->nb_conv; i++)
     {
         if (strcmp(user->conversation[i]->nom, contact_name) == 0)
         {
@@ -175,10 +181,14 @@ gboolean is_contact_valid(const gchar *contact_name)
         }
     }
 
+    if (user->u_pseudo == contact_name)
+    {
+        contact_found = FALSE;
+    }
+
     return contact_found;
 }
 
-// Déclarez la fonction de temporisation
 gboolean reload_messages(gpointer user_data)
 {
     load_chat_history(actual_conversation);
@@ -198,11 +208,14 @@ void start_message_reload_timer()
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
 {
-    GtkCssProvider *provider = gtk_css_provider_new();
-    gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
-    char *contact_name = g_strdup(gtk_entry_get_text(GTK_ENTRY(data)));
+
+    char *conv_name = gtk_entry_get_text(GTK_ENTRY(conv_name_entry));
+
+    char *contact_name = gtk_entry_get_text(GTK_ENTRY(contact_entry));
+
     g_strstrip(contact_name);
-    if (contact_name[0] == '\0')
+    g_strstrip(conv_name);
+    if (contact_name[0] == '\0' || conv_name[0] == '\0')
         return;
 
     // Vérifier si le contact est valide
@@ -213,66 +226,105 @@ void create_new_conversation(GtkWidget *widget, gpointer data)
         return;
     }
 
-    strncpy(actual_conversation, contact_name, sizeof(actual_conversation) - 1);
+    strncpy(actual_conversation, conv_name, sizeof(actual_conversation) - 1);
 
-	char nom[32] = "nouvelle";
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
-	char payload[1056];
-	snprintf(payload,1056,"%s:%s:",contact_name,user->u_pseudo);
-	query_t q = construire_message(CREATE,nom,payload);
-	envoyer_query(sock,&q);
-	int rep = interpreter_message(sock,content);
-	if(rep == -1){
-		printf("failed to create : %s\n",content[0]);
-		return;
-	}
-	printf("success created conversation : %s", content[0]);
+    char payload[1056];
+    snprintf(payload, 1056, "%s:%s:", contact_name, user->u_pseudo);
+    query_t q = construire_message(CREATE, conv_name, payload);
+    envoyer_query(sock, &q);
+    int rep = interpreter_message(sock, content);
+    if (rep == -1)
+    {
+        printf("failed to create : %s\n", content[0]);
+        return;
+    }
+    printf("success created conversation : %s", content[0]);
 
-    GtkWidget *listbox_item = gtk_button_new_with_label(contact_name);
-    g_signal_connect(listbox_item, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-    gtk_list_box_insert(GTK_LIST_BOX(listbox), listbox_item, -1);
+    gtk_entry_set_text(GTK_ENTRY(conv_name_entry), "");
+    gtk_entry_set_text(GTK_ENTRY(contact_entry), "");
 
-    gtk_entry_set_text(GTK_ENTRY(data), "");
-
-    apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
-
-    gtk_widget_show_all(chat_window);
+    load_contacts();
 }
 
 void maj()
 {
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
-    query_t q = construire_message(LOG,user->u_pseudo,user->password); 
-	envoyer_query(sock,&q);
-	int reponse = interpreter_message(sock,content);
-	
-	if(reponse == -1){
-		printf("failed to update");
-		return;
-	}
-	int incr = 0;
-	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
-		if(content[i] == NULL){
-			user->nb_conv = incr;
-			break;
-		}
-		printf("data %d: %s \n",i,content[i]);
-		strcpy(user->conversation[incr]->id_deconv, content[i]);
-		strcpy(user->conversation[incr]->nom, content[i + 1]);
-		incr++;
-	}
+    query_t q = construire_message(LOG, user->u_pseudo, user->password);
+    envoyer_query(sock, &q);
+    int reponse = interpreter_message(sock, content);
+
+    if (reponse == -1)
+    {
+        printf("failed to update");
+        return;
+    }
+    int incr = 0;
+    for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+    {
+        if (content[i] == NULL)
+        {
+            user->nb_conv = incr;
+            break;
+        }
+        printf("data %d: %s \n", i, content[i]);
+        strcpy(user->conversation[incr]->id_deconv, content[i]);
+        strcpy(user->conversation[incr]->nom, content[i + 1]);
+        incr++;
+    }
 }
 
 void load_contacts()
 {
+    // Create a new CSS provider and load CSS
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
+
+    // Update data before modifying the UI
     maj();
-    for(int i = 0; i < user->nb_conv; i++)
+
+    // Get current list box children (rows)
+    GList *rows = gtk_container_get_children(GTK_CONTAINER(listbox));
+    GList *iter;
+
+    // Check if a label for each conversation exists; update or add new rows as needed
+    for (int i = 0; i < user->nb_conv; i++)
     {
-        GtkWidget *button = gtk_button_new_with_label(user->conversation[i]->nom);
-        gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
-        g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-    
+        GtkWidget *button = NULL;
+        const char *current_name = user->conversation[i]->nom;
+        gboolean found = FALSE;
+
+        // Iterate through rows to find if button exists
+        for (iter = rows; iter != NULL; iter = g_list_next(iter))
+        {
+            GtkListBoxRow *row = GTK_LIST_BOX_ROW(iter->data);
+            GtkWidget *child_button = gtk_bin_get_child(GTK_BIN(row)); // Get the child button of the row
+            const char *button_label = gtk_button_get_label(GTK_BUTTON(child_button));
+
+            if (strcmp(button_label, current_name) == 0)
+            {
+                found = TRUE;
+                break; // Button already exists
+            }
+        }
+
+        // If button not found, create new one and add to list box
+        if (!found)
+        {
+            button = gtk_button_new_with_label(current_name);
+            gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
+            g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+        }
     }
+
+    // Free the list of rows
+    g_list_free(rows);
+
+    // Apply CSS to the chat window and list box
+    apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
+
+    // Show the chat window and list box
+    gtk_widget_show_all(chat_window);
 }
 
 void open_chat_window()
@@ -299,21 +351,28 @@ void open_chat_window()
     GtkWidget *vbox_left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_pack_start(GTK_BOX(hbox), vbox_left, FALSE, FALSE, 0);
 
-    // Création de la boîte horizontale contenant l'entrée et le bouton
-    GtkWidget *hbox_entry = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_set_homogeneous(GTK_BOX(hbox_entry), FALSE);
+    // Création de la boîte horizontale contenant l'entrée pour le nom de la conversation, l'entrée pour les participants, et le bouton de création
+    GtkWidget *hbox_conv = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_set_homogeneous(GTK_BOX(hbox_conv), FALSE);
 
-    // Champ de saisie pour le nom du contact
-    GtkWidget *contact_entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(contact_entry), "Enter contact name...");
-    gtk_box_pack_start(GTK_BOX(hbox_entry), contact_entry, TRUE, TRUE, 0);
-    g_signal_connect(contact_entry, "activate", G_CALLBACK(create_new_conversation), contact_entry);
+    // Champ de saisie pour le nom de la conversation
+    conv_name_entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(conv_name_entry), "Enter name...");
+    gtk_box_pack_start(GTK_BOX(hbox_conv), conv_name_entry, FALSE, FALSE, 0);
+
+    // Champ de saisie pour les participants
+    contact_entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(contact_entry), "Enter participants...");
+    gtk_box_pack_start(GTK_BOX(hbox_conv), contact_entry, TRUE, TRUE, 0);
 
     // Bouton pour créer une nouvelle conversation
-    GtkWidget *new_conv_button = gtk_button_new_with_label("New");
-    g_signal_connect(new_conv_button, "clicked", G_CALLBACK(create_new_conversation), contact_entry);
-    gtk_box_pack_start(GTK_BOX(hbox_entry), new_conv_button, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(vbox_left), hbox_entry, FALSE, FALSE, 0);
+    GtkWidget *new_conv_button = gtk_button_new_with_label("Create");
+    g_signal_connect(new_conv_button, "clicked", G_CALLBACK(create_new_conversation), NULL);
+    // Reduce the width allocation by not allowing expansion
+    gtk_box_pack_start(GTK_BOX(hbox_conv), new_conv_button, FALSE, FALSE, 0);
+
+    // Ajouter hbox_conv à vbox_left
+    gtk_box_pack_start(GTK_BOX(vbox_left), hbox_conv, FALSE, FALSE, 0);
 
     // Création du menu défilant à gauche
     GtkWidget *scroll_menu = gtk_scrolled_window_new(NULL, NULL);
@@ -370,7 +429,7 @@ void open_chat_window()
     gtk_widget_set_name(chat_area, "chat_area");
     gtk_widget_set_name(chat_entry, "chat_entry");
     gtk_widget_set_name(scrolled_window, "chat_scrolled_window");
-    gtk_widget_set_name(send_button, "send_button");
+    gtk_widget_set_name(conv_name_entry, "conv_name_entry");
     gtk_widget_set_name(new_conv_button, "new_button");
     gtk_widget_set_name(logout_button, "logout_button");
 
@@ -619,50 +678,103 @@ void send_message(GtkWidget *widget, gpointer data)
         return;
     }
     char *conv_id = malloc(37);
-    if(get_conversation_id(actual_conversation, conv_id) == FALSE)
+    if (get_conversation_id(actual_conversation, conv_id) == FALSE)
     {
         printf("Conversation not found\n");
         return;
     }
-	char * sizem = malloc(5);
-	char * payload = malloc(1032);
-	sprintf(sizem,"%d",(int)strlen(message) + 1);
-	snprintf(payload,1032,"%s:%s:",conv_id,sizem);
-	
-	query_t q;
+    char *sizem = malloc(5);
+    char *payload = malloc(1032);
+    sprintf(sizem, "%d", (int)strlen(message) + 1);
+    snprintf(payload, 1032, "%s:%s:", conv_id, sizem);
+
+    query_t q;
     char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
     printf("Sending message to %s\n", actual_conversation);
     printf("Message: %s\n", message);
-	q = construire_message(SEND,user->u_pseudo,payload);
-	envoyer_query(sock,&q);
-	write(sock,message,(int)strlen(message)+1);
+    q = construire_message(SEND, user->u_pseudo, payload);
+    envoyer_query(sock, &q);
+    write(sock, message, (int)strlen(message) + 1);
 
-	int rep = interpreter_message(sock,content);
-	if(rep == -1){
-		printf("Serveur had a problem : message ignored \n");
-		return;
-	}
-	printf("Serveur : ACK, message saved on serveur : %s\n",content[0]);
+    int rep = interpreter_message(sock, content);
+    if (rep == -1)
+    {
+        printf("Serveur had a problem : message ignored \n");
+        return;
+    }
+    printf("Serveur : ACK, message saved on serveur : %s\n", content[0]);
 
     load_chat_history(actual_conversation);
     gtk_entry_set_text(GTK_ENTRY(chat_entry), "");
     free(message);
-	free(payload);
+    free(payload);
     free(sizem);
 }
 
 void append_to_text_view(const gchar *text)
 {
+    // Define and load CSS
+    const gchar *css = "textview {"
+                       "  background-color: #F0F0F0;"
+                       "  font-family: 'Sans Serif';"
+                       "  font-size: 12px;"
+                       "}";
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+
+    // Apply CSS to the chat_view
+    GtkStyleContext *context = gtk_widget_get_style_context(chat_view);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     GtkTextIter end_iter;
-
-    // Obtient le GtkTextIter pointant à la fin du buffer
     gtk_text_buffer_get_end_iter(buffer, &end_iter);
-    // Insère le texte au pointeur de fin (ajoute le texte à la fin du buffer)
-    gtk_text_buffer_insert(buffer, &end_iter, text, -1);
+    const gchar *colors[10] = {"darkblue", "orange", "blue", "red", "purple", "cyan", "magenta", "lime", "pink", "teal"};
 
-    // Défilement automatique vers le bas en utilisant g_idle_add
-    //g_idle_add(scroll_to_bottom, chat_view);
+    GHashTable *user_colors = g_hash_table_new(g_str_hash, g_str_equal);
+
+    gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
+
+    gchar **lines = g_strsplit(text, "\n", -1); // Split text into lines
+    for (int i = 0; lines[i] != NULL; i++)
+    {
+        gchar **parts = g_strsplit(lines[i], ":", 2); // Split each line into username and message
+        if (parts[0] && parts[1])
+        {
+            gchar *color_tag;
+            if (!g_hash_table_contains(user_colors, parts[0]))
+            {
+                // Assign new color if user does not have one
+                int color_index = g_hash_table_size(user_colors) % 10; // Rotate through colors if more than 10 users
+                color_tag = g_strdup_printf("%s_message", colors[color_index]);
+                g_hash_table_insert(user_colors, g_strdup(parts[0]), g_strdup(color_tag));
+
+                // Create a tag for the username and message with this new color
+                gtk_text_buffer_create_tag(buffer, color_tag, "foreground", colors[color_index], "weight", PANGO_WEIGHT_BOLD, "left_margin", 10, "right_margin", 10, NULL);
+            }
+            else
+            {
+                color_tag = g_hash_table_lookup(user_colors, parts[0]);
+            }
+
+            // Format and insert the username
+            gchar *username_formatted = g_strdup_printf("%s: ", parts[0]);
+            gtk_text_buffer_insert_with_tags_by_name(buffer, &end_iter, username_formatted, -1, color_tag, NULL);
+
+            // Insert the message
+            gtk_text_buffer_insert(buffer, &end_iter, parts[1], -1);
+            gtk_text_buffer_insert(buffer, &end_iter, "\n", -1);
+            g_free(username_formatted);
+        }
+        g_strfreev(parts);
+    }
+    g_strfreev(lines);
+
+    g_hash_table_destroy(user_colors);
+
+    // Automatic scrolling
+    g_idle_add(scroll_to_bottom, chat_view);
 }
 
 gboolean scroll_to_bottom(gpointer data)
@@ -670,11 +782,22 @@ gboolean scroll_to_bottom(gpointer data)
     GtkTextView *text_view = GTK_TEXT_VIEW(data);
     GtkAdjustment *adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(text_view));
 
-    // Définit la valeur de l'ajustement à son maximum, ce qui fait défiler vers le bas
-    gtk_adjustment_set_value(adjustment, gtk_adjustment_get_upper(adjustment) - gtk_adjustment_get_page_size(adjustment));
+    gdouble lower, upper, page_size, page_increment, value;
+    lower = gtk_adjustment_get_lower(adjustment);
+    upper = gtk_adjustment_get_upper(adjustment);
+    page_size = gtk_adjustment_get_page_size(adjustment);
+    value = gtk_adjustment_get_value(adjustment);
 
-    // Retourne FALSE pour que g_idle_add() n'appelle pas cette fonction une seconde fois
-    return FALSE;
+    // Check if the scrollbar is at the bottom
+    if (value + page_size != upper)
+    {
+        // User is not at the bottom; do not scroll
+        return FALSE;
+    }
+
+    // Scroll to bottom
+    gtk_adjustment_set_value(adjustment, upper - page_size);
+    return FALSE; // Return FALSE so g_idle_add() won't call this function again
 }
 
 gboolean get_conversation_id(char *partner_name, char *conversation_id)

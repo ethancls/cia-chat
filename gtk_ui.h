@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-//gcc -Wall `pkg-config --cflags gtk+-3.0` client.c -o cia-chat `pkg-config --libs gtk+-3.0` -lssl -lcrypto
+// gcc -Wall `pkg-config --cflags gtk+-3.0` client.c -o cia-chat `pkg-config --libs gtk+-3.0` -lssl -lcrypto
 
 #define NB_LIGNES_INFOS 2
 
@@ -40,7 +40,7 @@ void send_message(GtkWidget *widget, gpointer data);
 void append_to_text_view(const gchar *text);
 gboolean scroll_to_bottom(gpointer text_view);
 gboolean file_exists(const char *filename);
-gboolean get_conversation_id(char* partner_name, char* conversation_id);
+gboolean get_conversation_id(char *partner_name, char *conversation_id);
 void load_chat_history();
 
 // Déclarations des variables globales
@@ -58,5 +58,7 @@ GtkWidget *signin_password_entry;
 GtkWidget *signin_firstname_entry;
 GtkWidget *signin_lastname_entry;
 GtkWidget *listbox;
+GtkWidget *conv_name_entry;
+GtkWidget *contact_entry;
 gchar actual_conversation[64];
 gchar user_name[64];

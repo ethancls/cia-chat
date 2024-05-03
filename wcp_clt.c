@@ -372,20 +372,22 @@ int creer_connecter_sock(char *addr_ipv4, uint16_t port)
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0)
 	{
-		perror("socket");
+		printf("socket creation failed\n");
 		exit(0);
 	}
-	struct sockaddr_in sa = {.sin_family = AF_INET,
-							 .sin_port = htons(port)};
 
-	if (inet_pton(AF_INET, addr_ipv4, &sa.sin_addr) != 1)
+	struct sockaddr_in * sa = malloc(sizeof(struct sockaddr_in));
+	sa->sin_family = AF_INET;
+	sa->sin_port = htons(port);
+
+	if (inet_pton(AF_INET, addr_ipv4, &(sa->sin_addr)) != 1)
 	{
-		perror("socket");
+		printf("inet_pton failed\n");
 	}
-	socklen_t sl = sizeof(sa);
-	if (connect(sock, (struct sockaddr *)&sa, sl) < 0)
+	socklen_t sl = sizeof(struct sockaddr_in);
+	if (connect(sock, (struct sockaddr *)sa, sl) < 0)
 	{
-		perror("connect");
+		printf("connect failed\n");
 		exit(3);
 	}
 	return sock;
