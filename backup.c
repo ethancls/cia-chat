@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
 		// Création du thread
 		pthread_create(&threadw, NULL, thread_worker, wa); // lancement d'un thread pour un client
 		pthread_detach(threadw);						   // le systeme peut recuperer les ressource quand le thread est fermer
-
 		free(sa_clt);
 		free(ip_str);
 	}
@@ -106,8 +105,7 @@ tokens_t convert_to_request(const char *str)
 
 int is_contact_valid(char *contact_name)
 {
-	char * line = malloc(sizeof(char) * 256);
-	int valid = 0;
+	char *line = malloc(sizeof(char) * 256);
 	char *file_username;
 	char *saveptr;
 
@@ -124,12 +122,12 @@ int is_contact_valid(char *contact_name)
 
 		if (file_username != NULL && strcmp(contact_name, file_username) == 0)
 		{
-			valid = -1;
+			return 0;
 			break;
 		}
 	}
 	fclose(file);
-	return valid;
+	return -1;
 }
 
 int read_until_nl(int fd, char *buf)
@@ -149,7 +147,6 @@ int read_until_nl(int fd, char *buf)
 		if (*readChar == '\n' && !dansguillemet)
 		{							 // quand on arrive a '0' on retourne
 			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
-            free(readChar);
 			return numChar;
 		}
 		*(buf + numChar) = *readChar; // on ajoute un char dans notre buffer
@@ -165,39 +162,11 @@ int read_until_nl(int fd, char *buf)
 	free(readChar); // on libere notre malloc
 	return numChar;
 }
-char *create_new_conversation_file(char *conv_name);
 
 void usage(char *nom_prog)
 {
-	fprintf(stderr, "Usage: %s repertoire_comptines\n"
-					"serveur pour WCP (Wikicomptine Protocol)\n"
-					"Exemple: %s comptines\n",
-			nom_prog, nom_prog);
+	fprintf(stderr, "Usage: %s \n",nom_prog);
 }
-
-/** Retourne en cas de succès le descripteur de fichier d'une socket d'écoute
- *  attachée au port port et à toutes les adresses locales. */
-int creer_configurer_sock_ecoute(uint16_t port);
-
-/* Écrit dans le fichier de desripteur fd la liste des comptines présents dans
- *  le catalogue c comme spécifié par le protocole WCP, c'est-à-dire sous la
- *  forme de plusieurs lignes terminées par '\n' :
- *  chaque ligne commence par le numéro de la comptine (son indice dans le
- *  catalogue) commençant à 0, écrit en décimal, sur 6 caractères
- *  suivi d'un espace
- *  puis du titre de la comptine
- *  une ligne vide termine le message */
-// void envoyer_liste(int fd, struct catalogue *c);
-
-/* Lit dans fd un entier sur 2 octets écrit en network byte order
- *  retourne : cet entier en boutisme machine. */
-// uint16_t recevoir_num_comptine(int fd);
-
-/* Écrit dans fd la comptine numéro ic du catalogue c dont le fichier est situé
- *  dans le répertoire dirname comme spécifié par le protocole WCP, c'est-à-dire :
- *  chaque ligne du fichier de comptine est écrite avec son '\n' final, y
- *  compris son titre, deux lignes vides terminent le message */
-// void envoyer_comptine(int fd, const char *dirname, struct catalogue *c, uint16_t ic);
 
 // Serveur multi-threadé la logique est ecrite dans le thread
 void *thread_worker(void *arg)
@@ -273,20 +242,12 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 	case CONV: // CONV <IdConv> <NomParticipants>
 
 		write_query_end(&query, "CONV ");
-		// char * conv = strtok(content,"\\");
-		// char * participant = strtok(NULL,"\\");
-		// char *contenueConv = strtok(NULL, "\\");
-		// encryption
-		// write_query_end(&query,conv);
-		// write_query_end(&query,"\\");
-		// write_query_end(&query,participant);
-		// write_query_end(&query,"\\");
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, "\n");
-
 		break;
+
 	case LOG_OK: // LOG_OK <NomUtilisateur> <ListeConversations>
 
 		write_query_end(&query, "LOG_OK ");
@@ -295,50 +256,53 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-
 		break;
+
 	case LOG_FAILED: // LOG_FAILED <NomUtilisateur>
+
 		write_query_end(&query, "LOG_FAILED ");
 		write_query_end(&query, info); // pq envoyer quand log failed ??? juste envoyer token
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-
 		break;
+
 	case DENIED: // DENIED <Raison> <CodeErreur>
+
 		write_query_end(&query, "DENIED ");
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-		break; 
+		break;
 
 	case OK: // OK <Info>
+
 		write_query_end(&query, "OK ");
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-
 		break;
+
 	case SENDING_TRAFFIC: // SENDING_TRAFFIC <Taille> <Contenu>
+
 		write_query_end(&query, "SENDING_TRAFFIC ");
 		write_query_end(&query, info);
 		write_query_end(&query, " ");
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-
 		break;
+		
 	default:
 		printf("invalid request");
 		write_query_end(&query, "ERROR_INVALID_REQUEST\n");
 		break;
 	}
-
 	return query;
 }
 
@@ -380,7 +344,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("login success\n");
 		int userIndex = 0;
 		check = 0;
-		char *content = malloc(sizeof(char) * master->User[userIndex]->nbConv * 2 * MAX_INFO_SIZE);
+		char *content = malloc(sizeof(char) * MAX_USERS * 2 * MAX_INFO_SIZE);
 		content[0] = '\0';
 		for (; userIndex < master->nbUser; userIndex++)
 		{
@@ -407,7 +371,6 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("content : %s\n", content);
 		rep = serv_construire_message(LOG_OK, username, content);
 		envoyer_query(socket, &rep);
-        free(content);
 		break;
 
 	case SEND:
@@ -466,9 +429,10 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 			rep = serv_construire_message(DENIED, username, "no_user_found");
 		}
 		envoyer_query(socket, &rep);
-
 		break;
+
 	case UPDATE:
+
 		printf("@UPDATE\n");
 		// update conversation
 		printf("ouvrir conversation\n");
@@ -488,19 +452,19 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		int sz = lseek(fdconv, 0, SEEK_END);
 		lseek(fdconv, 0, SEEK_SET);
 		char *rawtext = malloc(sizeof(char) * sz);
-        rawtext[0] = '\0';
 		read(fdconv, rawtext, sz);
 		char *l_size = malloc(4);
 		sprintf(l_size, "%d", sz + 3);
 		char *sendtext = malloc(sizeof(char) * (sz + 3)); //+2 pour guillemet
 		snprintf(sendtext, sizeof(char) * (sz + 3), "%s\n", rawtext);
-
 		rep = serv_construire_message(SENDING_TRAFFIC, l_size, l_size); // envoie taille
 		envoyer_query(socket, &rep);
 		write(socket, sendtext, sz + 3); // envoie du text de la conv
 		close(fdconv);
 		break;
+
 	case CREATE:
+
 		printf("@CREATE\n");
 		char *user = strtok(payload, ":");
 		char *conversation = create_new_conversation_file(user);
@@ -512,21 +476,25 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		}
 		while ((user = strtok(NULL, ":")) != NULL)
 		{
-			addParticipant(conversation, username, user);
+			if(addParticipant(conversation, username, user))
+			{
+				rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant_%s");
+				envoyer_query(socket, &rep);
+				break;
+			}
 		}
 		rep = serv_construire_message(OK, conversation, "conversation_created");
 		envoyer_query(socket, &rep);
-		// OKS
-		//  renvoyer l'id de la conv au client
-		// OKR
 		break;
+
 	case SIGNIN:
+
 		printf("@SIGNIN\n");
 		printf("is_contact_valid : %d\n", is_contact_valid(username));
 		if (is_contact_valid(username) == -1)
 		{
 			printf("Username already exists\n"),
-			rep = serv_construire_message(DENIED, "Username already exists", "E_12");
+				rep = serv_construire_message(DENIED, "Username already exists", "E_12");
 			envoyer_query(socket, &rep);
 		}
 		else
@@ -537,9 +505,13 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 			envoyer_query(socket, &rep);
 		}
 		break;
+
 	case OK:
+
 		break;
+
 	default:
+
 		printf("@INVALID_REQUEST\n");
 		rep = serv_construire_message(DENIED, "Request has been denied", "E_13");
 		envoyer_query(socket, &rep);
@@ -627,21 +599,29 @@ char *create_new_conversation_file(char *conv_name)
 
 int addParticipant(char *convId, char *nomconv, char *participant)
 {
-	char filename[64];
-	snprintf(filename, sizeof(filename), "./database/users/%s.txt", participant);
-
-	int file = open(filename, O_WRONLY | O_APPEND);
-	if (file == -1)
+	if (is_contact_valid(participant) == 0)
 	{
-		perror("open");
+
+		char filename[64];
+		snprintf(filename, 64, "./database/users/%s.txt", participant);
+
+		int file = open(filename, O_WRONLY | O_APPEND);
+		if (file == -1)
+		{
+			perror("open");
+			return -1;
+		}
+
+		char *temp = malloc(64);
+		snprintf(temp, 64, "%s;%s\n", nomconv, convId);
+		write(file, temp, strlen(temp));
+		free(temp);
+		close(file);
+		return 0;
+	} else {
+		printf("Participant not found in login.txt\n");
 		return -1;
 	}
-
-	char *temp = malloc(64);
-	snprintf(temp, 64, "%s;%s\n", nomconv, convId);
-	write(file, temp, strlen(temp));
-	free(temp);
-	return 0;
 }
 
 void reload_database(masterDb_t *dbd)
@@ -658,60 +638,66 @@ void reload_database(masterDb_t *dbd)
 	struct dirent *entry;
 	int index = 0;
 	printf("Ouverture du dossier\n");
-	// load database
+	dbd->nbUser = 0;
 	while ((entry = readdir(d)) != NULL)
 	{
-		// printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
+		printf("Ouverture du fichier: %s %hhu\n", entry->d_name, entry->d_type);
 		if (entry->d_type == DT_REG)
 		{
-			char *filePath = malloc(sizeof(char) * 256);
-			snprintf(filePath, 256, "%s/%s", PATH_USER, entry->d_name);
-			// printf("path : %s\n", filePath);
-			// fflush(stdout);
-			int fd = open(filePath, O_RDONLY); // ouverture du fichier avec path
-			if (fd == -1)
+			// Check if the file extension is .txt
+			char *extension = strstr(entry->d_name, ".txt");
+			if (extension != NULL && strcmp(extension, ".txt") == 0)
 			{
-				perror("open");
-				exit(1);
+				char *filePath = malloc(sizeof(char) * 256);
+				snprintf(filePath, 256, "%s/%s", PATH_USER, entry->d_name);
+				// printf("path : %s\n", filePath);
+				// fflush(stdout);
+				int fd = open(filePath, O_RDONLY); // ouverture du fichier avec path
+				if (fd == -1)
+				{
+					perror("open");
+					exit(1);
+				}
+				char *buffer = malloc(sizeof(char) * 128);
+				sscanf(entry->d_name, "%[^.].txt", buffer);
+				dbd->User[index]->userID = buffer;
+				for (int p = 0; p < NB_LIGNES_INFOS; p++)
+				{
+					char *discard = (char *)malloc(sizeof(char) * 128);
+					read_until_nl(fd, discard);
+					free(discard);
+				}
+				char **convName = malloc(sizeof(char *) * 64);
+				char **conv = malloc(sizeof(char *) * 64);
+				for (int i = 0; i < 64; i++)
+				{
+					conv[i] = malloc(sizeof(char) * 64);
+				}
+				for (int i = 0; i < 64; i++)
+				{
+					convName[i] = malloc(sizeof(char) * 64);
+				}
+				int j = 0;
+				char **content = malloc(sizeof(char *) * 64);
+				for (int i = 0; i < 64; i++)
+				{
+					content[i] = malloc(sizeof(char) * 64);
+				}
+				while (1 < read_until_nl(fd, content[j]))
+				{
+					sscanf(content[j], "%[^;];%s", convName[j], conv[j]);
+					j++;
+				}
+				close(fd);
+				dbd->User[index]->nbConv = j;
+				dbd->User[index]->conversationID = conv;
+				dbd->User[index]->conversationName = convName;
+				index++;
 			}
-			char *buffer = malloc(sizeof(char) * 128);
-			sscanf(entry->d_name, "%[^.].txt", buffer);
-			dbd->User[index]->userID = buffer;
-			for (int p = 0; p < NB_LIGNES_INFOS; p++)
-			{
-				char *discard = (char *)malloc(sizeof(char) * 128);
-				read_until_nl(fd, discard);
-				free(discard);
-			}
-			char **convName = malloc(sizeof(char *) * 64);
-			char **conv = malloc(sizeof(char *) * 64);
-			for (int i = 0; i < 64; i++)
-			{
-				conv[i] = malloc(sizeof(char) * 64);
-			}
-			for (int i = 0; i < 64; i++)
-			{
-				convName[i] = malloc(sizeof(char) * 64);
-			}
-			int j = 0;
-			char **content = malloc(sizeof(char *) * 64);
-			for (int i = 0; i < 64; i++)
-			{
-				content[i] = malloc(sizeof(char) * 64);
-			}
-			while (1 < read_until_nl(fd, content[j]))
-			{
-				sscanf(content[j], "%[^;];%s", convName[j], conv[j]);
-				j++;
-			}
-			close(fd);
-			dbd->User[index]->nbConv = j;
-			dbd->User[index]->conversationID = conv;
-			dbd->User[index]->conversationName = convName;
-			index++;
 		}
 	}
 	dbd->nbUser = index;
+	// printf("nbUser : %d\n", dbd->nbUser);
 	closedir(d);
 	// print_master(dbd);
 }

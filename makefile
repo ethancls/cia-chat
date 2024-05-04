@@ -19,7 +19,7 @@ endif
 
 TARGET := cia-chat
 TARGET_SRV := wcp_srv
-SRCS := client.c wcp_clt.c
+SRCS := client_backup.c wcp_clt.c
 SRCS_SRV := backup.c
 
 all: check-libs clean $(TARGET) $(TARGET_SRV)

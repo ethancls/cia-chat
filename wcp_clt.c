@@ -406,7 +406,7 @@ void envoyer_message(int fd, char *message)
 void envoyer_query(int fd, query_t *q)
 {
 	write(fd, q->content, sizeof(char) * q->size);
-	free( q->content);
+	//free( q->content);
 }
 
 int interpreter_message(int fd,char ** dataRet)
@@ -426,7 +426,7 @@ int interpreter_message(int fd,char ** dataRet)
 	{
 	case LOG_OK:
 		printf("@LOGIN_OK\n");
-		if(strlen(payload) < 1){
+		if(strlen(payload) <= 1){
 			dataRet[0] = NULL;
 			break;
 		}

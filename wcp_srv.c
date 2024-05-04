@@ -717,6 +717,7 @@ void reload_database(masterDb_t *dbd)
 		}
 	}
 	dbd->nbUser = index;
+	printf("nbUser : %d\n", dbd->nbUser);
 	
 	closedir(d);
 	// print_master(dbd);
