@@ -380,7 +380,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 			break;
 		}
 		for (int i = 0; i < master->User[userIndex]->nbConv; i++)
-		{
+		{	
 			content = strcat(content, master->User[userIndex]->conversationID[i]);
 			content = strcat(content, ":");
 			content = strcat(content, master->User[userIndex]->conversationName[i]);

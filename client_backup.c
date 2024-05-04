@@ -210,7 +210,7 @@ void maj()
     else
     {
         printf("******MAJ******\n");
-        char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+        char **content = malloc(sizeof(char *) * MAX_CONVERSATIONS_PER_USER * 2);
         query_t q = construire_message(LOG, user->u_pseudo, user->password);
         envoyer_query(sock, &q);
         int reponse = interpreter_message(sock, content);
@@ -221,7 +221,7 @@ void maj()
             return;
         }
         int incr = 0;
-        for (int i = 0; i < CONTENT_MAX_NB * 2; i = i + 2)
+        for (int i = 0; i < MAX_CONVERSATIONS_PER_USER * 2; i = i + 2)
         {
             if (content[i] == NULL)
             {

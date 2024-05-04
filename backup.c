@@ -363,6 +363,10 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		}
 		for (int i = 0; i < master->User[userIndex]->nbConv; i++)
 		{
+			if(i >= MAX_CONVERSATIONS_PER_USER){
+				printf("max conv reached by client!!!!!!!!!!!!\n discarding surplus:\n");
+				break;
+			}
 			content = strcat(content, master->User[userIndex]->conversationID[i]);
 			content = strcat(content, ":");
 			content = strcat(content, master->User[userIndex]->conversationName[i]);

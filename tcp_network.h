@@ -24,6 +24,7 @@
 /* Définitions des constantes */
 #define PORT_WCP 4321
 #define CONTENT_MAX_SIZE 64
+#define MAX_CONVERSATIONS_PER_USER 64
 #define CONTENT_MAX_NB 32
 
 /* Définition des structures de données */
