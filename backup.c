@@ -1,8 +1,7 @@
 #include "./tcp_srv.h"
-
+sem_t sem;
 int main(int argc, char *argv[])
 {
-	sem_t sem;
 	sem_init(&sem, 0, 1);
 	printf("Serveur TCP\n");
 	masterDb_t *dbd = malloc(sizeof(masterDb_t));
@@ -39,6 +38,7 @@ int main(int argc, char *argv[])
 		free(sa_clt);
 		free(ip_str);
 	}
+	sem_destroy(&sem);
 	close(sock);
 	return 0;
 }
@@ -178,7 +178,9 @@ void *thread_worker(void *arg)
 	uint16_t n = 0;
 	while (n != 666)
 	{
+		sem_wait(&sem);
 		reload_database(args->dbd);
+		sem_post(&sem);
 		int size_query;
 		char *query_content = malloc(sizeof(char) * 2048);
 		size_query = read_until_nl(args->fd, query_content);
@@ -199,7 +201,9 @@ void *thread_worker(void *arg)
 		q.content = query_content;
 		q.size = size_query;
 		printf("\nQuery received: %s\n", q.content);
+		sem_wait(&sem);
 		serv_interpreter(&q, args->dbd, args->fd);
+		sem_post(&sem);
 		free(query_content);
 		n++;
 	}
@@ -346,6 +350,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		check = 0;
 		char *content = malloc(sizeof(char) * MAX_USERS * 2 * MAX_INFO_SIZE);
 		content[0] = '\0';
+		print_master(master);
 		for (; userIndex < master->nbUser; userIndex++)
 		{
 			if (!strcmp(username, master->User[userIndex]->userID))
@@ -357,7 +362,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		}
 		if (!check)
 		{
-			rep = serv_construire_message(LOG_FAILED, username, NULL);
+			rep = serv_construire_message(LOG_FAILED, username, username);
 			envoyer_query(socket, &rep);
 			break;
 		}
@@ -799,5 +804,6 @@ void print_master(masterDb_t *master)
 			printf("Conv %s : %s\n", master->User[i]->conversationName[j], master->User[i]->conversationID[j]);
 		}
 	}
+	printf("nb user = %d\n",master->nbUser);
 	printf("\n***************************\n");
 }
