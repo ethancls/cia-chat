@@ -164,10 +164,7 @@ gboolean reload_messages(gpointer user_data)
 // Fonction pour démarrer la temporisation
 void start_message_reload_timer()
 {
-    // Spécifiez l'intervalle en millisecondes
-    const guint interval_milliseconds = 2000;
-
-    g_timeout_add(interval_milliseconds, reload_messages, NULL);
+    g_timeout_add(2000, reload_messages, NULL);
 }
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
@@ -237,8 +234,12 @@ void maj()
             incr++;
         }
         printf("*******MAJ FINISHED*******\n");
+        free(content);
     }
 }
+
+// Declare a global hash table to track buttons for each conversation
+GHashTable *conversation_buttons = NULL;
 
 void load_contacts()
 {
@@ -246,50 +247,30 @@ void load_contacts()
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
 
-    // Update data before modifying the UI
-    maj();
+    maj(); // Assuming this updates the 'user' structure with the latest conversation data
 
-    // Get current list box children (rows)
-    GList *rows = gtk_container_get_children(GTK_CONTAINER(listbox));
-    GList *iter;
+    // Initialize the hash table if it doesn't exist
+    if (conversation_buttons == NULL) {
+        conversation_buttons = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    }
 
-    // Check if a label for each conversation exists; update or add new rows as needed
-    for (int i = 0; i < user->nb_conv; i++)
-    {
-        GtkWidget *button = NULL;
+    GtkWidget *button;
+    // Iterate over each conversation to ensure there's a corresponding button
+    for (int i = 0; i < user->nb_conv; i++) {
         const char *current_name = user->conversation[i]->nom;
-        gboolean found = FALSE;
 
-        // Iterate through rows to find if button exists
-        for (iter = rows; iter != NULL; iter = g_list_next(iter))
-        {
-            GtkListBoxRow *row = GTK_LIST_BOX_ROW(iter->data);
-            GtkWidget *child_button = gtk_bin_get_child(GTK_BIN(row)); // Get the child button of the row
-            const char *button_label = gtk_button_get_label(GTK_BUTTON(child_button));
-
-            if (strcmp(button_label, current_name) == 0)
-            {
-                found = TRUE;
-                break; // Button already exists
-            }
-        }
-
-        // If button not found, create new one and add to list box
-        if (!found)
-        {
+        button = g_hash_table_lookup(conversation_buttons, current_name);
+        if (button == NULL) {
+            // If button not found, create a new one and add to the hash table
             button = gtk_button_new_with_label(current_name);
             gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
             g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
+            g_hash_table_insert(conversation_buttons, g_strdup(current_name), button);
+            apply_css(listbox, GTK_STYLE_PROVIDER(provider));
         }
     }
-
-    // Free the list of rows
-    g_list_free(rows);
-
-    // Apply CSS to the chat window and list box
-    apply_css(chat_window, GTK_STYLE_PROVIDER(provider));
-
-    // Show the chat window and list box
+   
+    // Show all widgets in the window
     gtk_widget_show_all(chat_window);
 }
 
@@ -401,6 +382,7 @@ void open_chat_window()
     gtk_widget_set_name(chat_entry, "chat_entry");
     gtk_widget_set_name(scrolled_window, "chat_scrolled_window");
     gtk_widget_set_name(conv_name_entry, "conv_name_entry");
+    gtk_widget_set_name(send_button, "send_button");
     gtk_widget_set_name(new_conv_button, "new_button");
     gtk_widget_set_name(logout_button, "logout_button");
 
@@ -448,6 +430,7 @@ void submit_signin(GtkWidget *widget, gpointer data) // envoyer
     if (reponse == -1)
     {
         gtk_label_set_text(GTK_LABEL(error_label), "Username already exists");
+
         return;
     }
     else
@@ -798,4 +781,6 @@ void load_chat_history(char *contact_name)
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(chat_view));
     gtk_text_buffer_set_text(buffer, "", -1);
     append_to_text_view(content[0]);
+    free(content);
+    free(conv_id);
 }

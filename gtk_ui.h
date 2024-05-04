@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 // gcc -Wall `pkg-config --cflags gtk+-3.0` client.c -o cia-chat `pkg-config --libs gtk+-3.0` -lssl -lcrypto
 

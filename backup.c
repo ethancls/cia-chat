@@ -165,7 +165,7 @@ int read_until_nl(int fd, char *buf)
 
 void usage(char *nom_prog)
 {
-	fprintf(stderr, "Usage: %s \n",nom_prog);
+	fprintf(stderr, "Usage: %s \n", nom_prog);
 }
 
 // Serveur multi-threadé la logique est ecrite dans le thread
@@ -297,7 +297,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
 		break;
-		
+
 	default:
 		printf("invalid request");
 		write_query_end(&query, "ERROR_INVALID_REQUEST\n");
@@ -476,11 +476,11 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		}
 		while ((user = strtok(NULL, ":")) != NULL)
 		{
-			if(addParticipant(conversation, username, user))
+			if (addParticipant(conversation, username, user))
 			{
 				rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant_%s");
 				envoyer_query(socket, &rep);
-				break;
+				return -1;
 			}
 		}
 		rep = serv_construire_message(OK, conversation, "conversation_created");
@@ -491,10 +491,10 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 
 		printf("@SIGNIN\n");
 		printf("is_contact_valid : %d\n", is_contact_valid(username));
-		if (is_contact_valid(username) == -1)
+		if (is_contact_valid(username) == 0)
 		{
 			printf("Username already exists\n"),
-				rep = serv_construire_message(DENIED, "Username already exists", "E_12");
+			rep = serv_construire_message(DENIED, "Username already exists", "E_12");
 			envoyer_query(socket, &rep);
 		}
 		else
@@ -601,7 +601,6 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 {
 	if (is_contact_valid(participant) == 0)
 	{
-
 		char filename[64];
 		snprintf(filename, 64, "./database/users/%s.txt", participant);
 
@@ -611,14 +610,15 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 			perror("open");
 			return -1;
 		}
-
 		char *temp = malloc(64);
 		snprintf(temp, 64, "%s;%s\n", nomconv, convId);
 		write(file, temp, strlen(temp));
 		free(temp);
 		close(file);
 		return 0;
-	} else {
+	}
+	else
+	{
 		printf("Participant not found in login.txt\n");
 		return -1;
 	}
