@@ -451,15 +451,17 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		// taille de la discusion
 		int sz = lseek(fdconv, 0, SEEK_END);
 		lseek(fdconv, 0, SEEK_SET);
-		char *rawtext = malloc(sizeof(char) * sz);
+		char *rawtext = malloc(sizeof(char) * (sz +1));
 		read(fdconv, rawtext, sz);
+		rawtext[sz] = '\0';
 		char *l_size = malloc(4);
-		sprintf(l_size, "%d", sz + 3);
-		char *sendtext = malloc(sizeof(char) * (sz + 3)); //+2 pour guillemet
-		snprintf(sendtext, sizeof(char) * (sz + 3), "%s\n", rawtext);
+		sprintf(l_size, "%d", sz + 2);
+		char *sendtext = malloc(sizeof(char) * (sz + 2)); //+2 pour guillemet
+		snprintf(sendtext, sizeof(char) * (sz + 2), "%s\n", rawtext);
 		rep = serv_construire_message(SENDING_TRAFFIC, l_size, l_size); // envoie taille
 		envoyer_query(socket, &rep);
-		write(socket, sendtext, sz + 3); // envoie du text de la conv
+		write(socket, sendtext, (sz + 2)); // envoie du text de la conv
+		printf("envoyer : %s\n",sendtext);
 		close(fdconv);
 		break;
 

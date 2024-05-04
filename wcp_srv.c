@@ -457,8 +457,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("@UPDATE\n");
 		// update conversation
 		printf("ouvrir conversation\n");
-		char *filePath = malloc(sizeof(char) * 256);
-		snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, payload);
+		char *filePath = malloc(sizeof(char) * 258);
+		snprintf(filePath, sizeof(char) *257, "%s/%s.txt", PATH_CONV, payload);
 		printf("path : %s\n", filePath);
 		int fdconv = open(filePath, O_RDONLY);
 		if (fdconv == -1)
