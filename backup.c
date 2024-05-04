@@ -1,16 +1,13 @@
 #include "./tcp_srv.h"
 
-// Semaphore aaaaaah
-sem_t sem;
-
 int main(int argc, char *argv[])
 {
+	sem_t sem;
 	sem_init(&sem, 0, 1);
 	printf("Serveur TCP\n");
 	masterDb_t *dbd = malloc(sizeof(masterDb_t));
-	dbd->User = malloc(sizeof(UserData_t *) * MAX_USERS);
-	dbd->nbUser = 0;
-	for (int i = 0; i < MAX_USERS; i++)
+	dbd->User = malloc(sizeof(UserData_t *) * 128);
+	for (int i = 0; i < 128; i++)
 	{
 		dbd->User[i] = malloc(sizeof(UserData_t));
 	}
@@ -152,7 +149,7 @@ int read_until_nl(int fd, char *buf)
 		if (*readChar == '\n' && !dansguillemet)
 		{							 // quand on arrive a '0' on retourne
 			*(buf + numChar) = '\0'; // obligatoire sino buffer overflow
-			free(readChar);
+            free(readChar);
 			return numChar;
 		}
 		*(buf + numChar) = *readChar; // on ajoute un char dans notre buffer
@@ -168,6 +165,7 @@ int read_until_nl(int fd, char *buf)
 	free(readChar); // on libere notre malloc
 	return numChar;
 }
+char *create_new_conversation_file(char *conv_name);
 
 void usage(char *nom_prog)
 {
@@ -176,6 +174,30 @@ void usage(char *nom_prog)
 					"Exemple: %s comptines\n",
 			nom_prog, nom_prog);
 }
+
+/** Retourne en cas de succès le descripteur de fichier d'une socket d'écoute
+ *  attachée au port port et à toutes les adresses locales. */
+int creer_configurer_sock_ecoute(uint16_t port);
+
+/* Écrit dans le fichier de desripteur fd la liste des comptines présents dans
+ *  le catalogue c comme spécifié par le protocole WCP, c'est-à-dire sous la
+ *  forme de plusieurs lignes terminées par '\n' :
+ *  chaque ligne commence par le numéro de la comptine (son indice dans le
+ *  catalogue) commençant à 0, écrit en décimal, sur 6 caractères
+ *  suivi d'un espace
+ *  puis du titre de la comptine
+ *  une ligne vide termine le message */
+// void envoyer_liste(int fd, struct catalogue *c);
+
+/* Lit dans fd un entier sur 2 octets écrit en network byte order
+ *  retourne : cet entier en boutisme machine. */
+// uint16_t recevoir_num_comptine(int fd);
+
+/* Écrit dans fd la comptine numéro ic du catalogue c dont le fichier est situé
+ *  dans le répertoire dirname comme spécifié par le protocole WCP, c'est-à-dire :
+ *  chaque ligne du fichier de comptine est écrite avec son '\n' final, y
+ *  compris son titre, deux lignes vides terminent le message */
+// void envoyer_comptine(int fd, const char *dirname, struct catalogue *c, uint16_t ic);
 
 // Serveur multi-threadé la logique est ecrite dans le thread
 void *thread_worker(void *arg)
@@ -187,9 +209,7 @@ void *thread_worker(void *arg)
 	uint16_t n = 0;
 	while (n != 666)
 	{
-		sem_wait(&sem);
 		reload_database(args->dbd);
-		sem_post(&sem);
 		int size_query;
 		char *query_content = malloc(sizeof(char) * 2048);
 		size_query = read_until_nl(args->fd, query_content);
@@ -218,7 +238,6 @@ void *thread_worker(void *arg)
 	printf("Thread exiting.\n");
 	pthread_exit(EXIT_SUCCESS);
 }
-
 void to_hex_string(unsigned char *hash, char *output, size_t length)
 {
 	for (size_t i = 0; i < length; i++)
@@ -294,7 +313,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 		write_query_end(&query, content);
 		write_query_end(&query, " ");
 		write_query_end(&query, "\n");
-		break;
+		break; 
 
 	case OK: // OK <Info>
 		write_query_end(&query, "OK ");
@@ -326,7 +345,6 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 void envoyer_query(int fd, query_t *q)
 {
 	write(fd, q->content, sizeof(char) * q->size);
-	free(q->content);
 }
 
 int serv_interpreter(query_t *q, masterDb_t *master, int socket)
@@ -362,7 +380,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("login success\n");
 		int userIndex = 0;
 		check = 0;
-		char *content = malloc(sizeof(char) *  master->User[userIndex]->nbConv * 2 * MAX_INFO_SIZE);
+		char *content = malloc(sizeof(char) * master->User[userIndex]->nbConv * 2 * MAX_INFO_SIZE);
 		content[0] = '\0';
 		for (; userIndex < master->nbUser; userIndex++)
 		{
@@ -389,7 +407,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("content : %s\n", content);
 		rep = serv_construire_message(LOG_OK, username, content);
 		envoyer_query(socket, &rep);
-		free(content);
+        free(content);
 		break;
 
 	case SEND:
@@ -432,9 +450,6 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						printf("messaje written\n");
 						write(fdconv, formated, (int)strlen(formated));
 						close(fdconv);
-						free(formated);
-						free(message);
-						free(filePath);
 						// sem_post
 						break;
 					}
@@ -472,21 +487,18 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		// taille de la discusion
 		int sz = lseek(fdconv, 0, SEEK_END);
 		lseek(fdconv, 0, SEEK_SET);
-		char *rawtext = malloc(sizeof(char) * sz + 1);
+		char *rawtext = malloc(sizeof(char) * sz);
+        rawtext[0] = '\0';
 		read(fdconv, rawtext, sz);
-		rawtext[sz] = '\0';
 		char *l_size = malloc(4);
 		sprintf(l_size, "%d", sz + 3);
 		char *sendtext = malloc(sizeof(char) * (sz + 3)); //+2 pour guillemet
-		snprintf(sendtext, sizeof(char) * (sz) + 1, "%s\n", rawtext);
+		snprintf(sendtext, sizeof(char) * (sz + 3), "%s\n", rawtext);
 
 		rep = serv_construire_message(SENDING_TRAFFIC, l_size, l_size); // envoie taille
 		envoyer_query(socket, &rep);
-		write(socket, sendtext, sz ); // envoie du text de la conv
+		write(socket, sendtext, sz + 3); // envoie du text de la conv
 		close(fdconv);
-		free(sendtext);
-		free(rawtext);
-		free(l_size);
 		break;
 	case CREATE:
 		printf("@CREATE\n");
@@ -632,21 +644,6 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 	return 0;
 }
 
-void flushDatabase(masterDb_t *dbd){
-	for(int i = 0; i < dbd->nbUser; i++){
-		for(int j = 0; j < dbd->User[i]->nbConv;j++){
-			free(dbd->User[i]->conversationID[j]);
-			free(dbd->User[i]->conversationName[j]);
-		}
-		free(dbd->User[i]->conversationID);
-		free(dbd->User[i]->conversationName);
-		free(dbd->User[i]->userID);
-
-	}
-	dbd->nbUser = 0;
-	
-}
-
 void reload_database(masterDb_t *dbd)
 {
 	DIR *d = opendir("./database/users");
@@ -656,7 +653,7 @@ void reload_database(masterDb_t *dbd)
 		perror("no dir");
 		return;
 	}
-	// flushDatabase(dbd);
+
 	// check si le fichier est bien dans le dossier
 	struct dirent *entry;
 	int index = 0;
@@ -684,7 +681,7 @@ void reload_database(masterDb_t *dbd)
 			{
 				char *discard = (char *)malloc(sizeof(char) * 128);
 				read_until_nl(fd, discard);
-				//free(discard);
+				free(discard);
 			}
 			char **convName = malloc(sizeof(char *) * 64);
 			char **conv = malloc(sizeof(char *) * 64);
@@ -705,7 +702,6 @@ void reload_database(masterDb_t *dbd)
 			while (1 < read_until_nl(fd, content[j]))
 			{
 				sscanf(content[j], "%[^;];%s", convName[j], conv[j]);
-				//free(content[j]);
 				j++;
 			}
 			close(fd);
@@ -713,11 +709,9 @@ void reload_database(masterDb_t *dbd)
 			dbd->User[index]->conversationID = conv;
 			dbd->User[index]->conversationName = convName;
 			index++;
-			//free(filePath);
 		}
 	}
 	dbd->nbUser = index;
-	
 	closedir(d);
 	// print_master(dbd);
 }
@@ -768,8 +762,7 @@ int validate_login(char *username, char *password)
 			return 1;
 		}
 	}
-	free(line);
-	free(hashed_password_hex);
+
 	return 0;
 }
 

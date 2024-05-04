@@ -3,7 +3,7 @@ UNAME_S := $(shell uname -s)
 CC := gcc
 ifeq ($(UNAME_S),Linux)
 
-    CFLAGS := -w `pkg-config --cflags gtk+-3.0` -lpthread -g -O3
+    CFLAGS := -w `pkg-config --cflags gtk+-3.0` -lpthread -g
 
     LDFLAGS := -L/usr/local/lib `pkg-config --libs gtk+-3.0` -lssl -lcrypto
     PKG_MANAGER := sudo apt-get install -y
@@ -11,7 +11,7 @@ ifeq ($(UNAME_S),Linux)
     REQUIRED_PKGS := libgtk-3-dev libssl-dev pkg-config
 endif
 ifeq ($(UNAME_S),Darwin)
-    CFLAGS = -w `pkg-config --cflags gtk+-3.0` -I/opt/homebrew/opt/openssl@3/include -O3
+    CFLAGS = -w `pkg-config --cflags gtk+-3.0` -I/opt/homebrew/opt/openssl@3/include
     LDFLAGS = -L/opt/homebrew/opt/openssl@3/lib -lssl -lcrypto `pkg-config --libs gtk+-3.0`
     PKG_MANAGER := brew install
     REQUIRED_PKGS := gtk+3 openssl@3 pkg-config
@@ -20,7 +20,7 @@ endif
 TARGET := cia-chat
 TARGET_SRV := wcp_srv
 SRCS := client.c wcp_clt.c
-SRCS_SRV := wcp_srv.c
+SRCS_SRV := backup.c
 
 all: check-libs clean $(TARGET) $(TARGET_SRV)
 

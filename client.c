@@ -81,12 +81,11 @@ void login(GtkWidget *widget, gpointer data)
     printf("Logging in as %s\n", user->u_pseudo);
     printf("Password: %s\n", user->password);
 
-    query_t *q = malloc(sizeof(query_t));
     char **dataBuffer = malloc(sizeof(char *) * CONTENT_MAX_NB * 2);
 
-    *q = construire_message(LOG, user->u_pseudo, user->password);
+    query_t q = construire_message(LOG, user->u_pseudo, user->password);
     printf("Built login query\n");
-    envoyer_query(sock, q);
+    envoyer_query(sock, &q);
     printf("Sent login query\n");
     int reponse = interpreter_message(sock, dataBuffer);
 
@@ -389,7 +388,7 @@ void open_chat_window()
     // Affichage de tous les widgets
     gtk_widget_show_all(chat_window);
 
-    //start_message_reload_timer();
+    start_message_reload_timer();
 }
 
 void submit_signin(GtkWidget *widget, gpointer data) // envoyer
