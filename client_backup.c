@@ -55,6 +55,8 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
+GHashTable *conversation_buttons;
+
 void login(GtkWidget *widget, gpointer data)
 {
     update = FALSE;
@@ -96,6 +98,7 @@ void login(GtkWidget *widget, gpointer data)
         printf("Logged in\n");
         strncpy(user_name, username, sizeof(user_name) - 1);
         gtk_widget_hide(login_window);
+        GHashTable *conversation_buttons = NULL;
         open_chat_window();
 
         printf("*************************LOADING DATA***************************************\n");
@@ -165,6 +168,39 @@ gboolean reload_messages(gpointer user_data)
 void start_message_reload_timer()
 {
     g_timeout_add(2000, reload_messages, NULL);
+}
+
+void add_to_conv(GtkWidget *widget, gpointer data)
+{
+    char *contact_name = gtk_entry_get_text(GTK_ENTRY(contact_entry));
+    g_strstrip(contact_name);
+    if (contact_name[0] == '\0')
+        return;
+    printf("Adding %s to conversation %s\n", contact_name, actual_conversation);
+    fflush(stdout);
+    char *conv_id = malloc(37);
+    if (get_conversation_id(actual_conversation, conv_id) == FALSE)
+    {
+        printf("Conversation not found\n");
+        return;
+    }
+
+    char *payload = malloc(1032);
+    snprintf(payload, 1032, "%s:%s:", conv_id, contact_name);
+
+    /*query_t q = construire_message(ADD, user->u_pseudo, payload);
+    envoyer_query(sock, &q);
+
+    char **content = malloc(sizeof(char *) * CONTENT_MAX_NB);
+    int rep = interpreter_message(sock, content);
+    if (rep == -1)
+    {
+        printf("Serveur had a problem : message ignored \n");
+        return;
+    }
+    printf("Serveur : ACK, participant added to conversation : %s\n", content[0]);*/
+
+    load_contacts();
 }
 
 void create_new_conversation(GtkWidget *widget, gpointer data)
@@ -238,30 +274,28 @@ void maj()
     }
 }
 
-// Declare a global hash table to track buttons for each conversation
-GHashTable *conversation_buttons = NULL;
-
 void load_contacts()
 {
     // Create a new CSS provider and load CSS
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_path(provider, "./data/css/home.css", NULL);
 
-    maj(); // Assuming this updates the 'user' structure with the latest conversation data
+    maj();
 
-    // Initialize the hash table if it doesn't exist
-    if (conversation_buttons == NULL) {
+    if (conversation_buttons == NULL)
+    {
         conversation_buttons = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     }
 
     GtkWidget *button;
-    // Iterate over each conversation to ensure there's a corresponding button
-    for (int i = 0; i < user->nb_conv; i++) {
+
+    for (int i = 0; i < user->nb_conv; i++)
+    {
         const char *current_name = user->conversation[i]->nom;
 
         button = g_hash_table_lookup(conversation_buttons, current_name);
-        if (button == NULL) {
-            // If button not found, create a new one and add to the hash table
+        if (button == NULL)
+        {
             button = gtk_button_new_with_label(current_name);
             gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
             g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
@@ -269,7 +303,7 @@ void load_contacts()
             apply_css(listbox, GTK_STYLE_PROVIDER(provider));
         }
     }
-   
+
     // Show all widgets in the window
     gtk_widget_show_all(chat_window);
 }
@@ -361,6 +395,11 @@ void open_chat_window()
     g_signal_connect(logout_button, "clicked", G_CALLBACK(logout), NULL);
     gtk_box_pack_start(GTK_BOX(hbox2), logout_button, FALSE, FALSE, 0);
 
+    // Création du bouton pour addParticipant
+    GtkWidget *addParticipant = gtk_button_new_with_label("Add");
+    g_signal_connect(addParticipant, "clicked", G_CALLBACK(add_to_conv), NULL);
+    gtk_box_pack_start(GTK_BOX(hbox2), addParticipant, FALSE, FALSE, 0);
+
     // Champ de saisie pour les messages
     chat_entry = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(chat_entry), "Type your message here...");
@@ -385,6 +424,7 @@ void open_chat_window()
     gtk_widget_set_name(send_button, "send_button");
     gtk_widget_set_name(new_conv_button, "new_button");
     gtk_widget_set_name(logout_button, "logout_button");
+    gtk_widget_set_name(addParticipant, "addParticipant");
 
     // Appliquer le CSS à la fenêtre de connexion
     apply_css(chat_window, GTK_STYLE_PROVIDER(provider));

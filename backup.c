@@ -478,7 +478,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 
 		printf("@CREATE\n");
 		char *user = strtok(payload, ":");
-		char *conversation = create_new_conversation_file(user);
+		char *conversation = create_new_conversation_file(username);
 		if (addParticipant(conversation, username, user) == -1)
 		{
 			rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant");
@@ -598,7 +598,10 @@ char *create_new_conversation_file(char *conv_name)
 	FILE *file = fopen(filePath, "w");
 	if (file != NULL)
 	{
-		fprintf(file, "cia:\n"); // evite le chat vide
+		char filename[64];
+		snprintf(filename, 64, "		#%s:\n", conv_name);
+		printf("filename : %s\n", filename);
+		fprintf(file, filename); // evite le chat vide
 		fclose(file);
 	}
 	else
@@ -635,6 +638,21 @@ int addParticipant(char *convId, char *nomconv, char *participant)
 	}
 }
 
+void flushDatabase(masterDb_t *dbd){
+	for(int i = 0; i < dbd->nbUser; i++){
+		for(int j = 0; j < dbd->User[i]->nbConv;j++){
+			free(dbd->User[i]->conversationID[j]);
+			free(dbd->User[i]->conversationName[j]);
+		}
+		free(dbd->User[i]->conversationID);
+		free(dbd->User[i]->conversationName);
+		free(dbd->User[i]->userID);
+
+	}
+	dbd->nbUser = 0;
+	
+}
+
 void reload_database(masterDb_t *dbd)
 {
 	DIR *d = opendir("./database/users");
@@ -644,7 +662,7 @@ void reload_database(masterDb_t *dbd)
 		perror("no dir");
 		return;
 	}
-
+	flushDatabase(dbd);
 	// check si le fichier est bien dans le dossier
 	struct dirent *entry;
 	int index = 0;
