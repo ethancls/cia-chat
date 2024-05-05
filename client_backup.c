@@ -65,8 +65,8 @@ void login(GtkWidget *widget, gpointer data)
     user->nb_conv = 0;
     user->u_pseudo = username;
     user->password = password;
-    user->conversation = malloc(sizeof(convo_t *) * CONTENT_MAX_NB);
-    for (int i = 0; i < CONTENT_MAX_NB; i++)
+    user->conversation = malloc(sizeof(convo_t *) * MAX_CONVERSATIONS_PER_USER);
+    for (int i = 0; i < MAX_CONVERSATIONS_PER_USER; i++)
     {
         user->conversation[i] = malloc(sizeof(convo_t));
         user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
@@ -77,7 +77,7 @@ void login(GtkWidget *widget, gpointer data)
     printf("Password: %s\n", user->password);
 
     query_t *q = malloc(sizeof(query_t));
-    char **dataBuffer = malloc(sizeof(char *) * CONTENT_MAX_NB * 2);
+    char **dataBuffer = malloc(sizeof(char *) * MAX_CONVERSATIONS_PER_USER * 2);
 
     *q = construire_message(LOG, user->u_pseudo, user->password);
     printf("Built login query\n");
@@ -107,11 +107,10 @@ void login(GtkWidget *widget, gpointer data)
         else
         {
             int incr = 0;
-            for (int i = 0; i < CONTENT_MAX_NB; i = i + 2)
+            for (int i = 0; i < MAX_CONVERSATIONS_PER_USER * 2; i = i + 2)
             {
                 if (dataBuffer[i] == NULL)
                 {
-                    user->nb_conv = incr;
                     break;
                 }
                 printf("id %d: %s ", i, dataBuffer[i]);
@@ -122,7 +121,9 @@ void login(GtkWidget *widget, gpointer data)
                 printf("name %d: %s \n", i + 1, dataBuffer[i + 1]);
                 incr++;
             }
+            user->nb_conv = incr;
         }
+        
         printf("*************************DATA LOADED***************************************\n");
         update = TRUE;
     }
@@ -225,14 +226,14 @@ void maj()
         {
             if (content[i] == NULL)
             {
-                user->nb_conv = incr;
                 break;
             }
-            printf("data %d: %s \n", i, content[i]);
+            printf("data %d: %s \n", incr, content[i]);
             strcpy(user->conversation[incr]->id_deconv, content[i]);
             strcpy(user->conversation[incr]->nom, content[i + 1]);
             incr++;
         }
+        user->nb_conv = incr;
         printf("*******MAJ FINISHED*******\n");
         free(content);
     }
