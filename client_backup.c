@@ -55,8 +55,6 @@ void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
     }
 }
 
-GHashTable *conversation_buttons;
-
 void login(GtkWidget *widget, gpointer data)
 {
     update = FALSE;
@@ -97,8 +95,8 @@ void login(GtkWidget *widget, gpointer data)
     {
         printf("Logged in\n");
         strncpy(user_name, username, sizeof(user_name) - 1);
+        actual_conversation[0] = '\0';
         gtk_widget_hide(login_window);
-        GHashTable *conversation_buttons = NULL;
         open_chat_window();
 
         printf("*************************LOADING DATA***************************************\n");
@@ -282,26 +280,39 @@ void load_contacts()
 
     maj();
 
-    if (conversation_buttons == NULL)
-    {
-        conversation_buttons = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    }
+    // Get current list box children (rows)
+    GList *rows = gtk_container_get_children(GTK_CONTAINER(listbox));
+    GList *iter;
 
-    GtkWidget *button;
-
+    // Check if a label for each conversation exists; update or add new rows as needed
     for (int i = 0; i < user->nb_conv; i++)
     {
+        GtkWidget *button = NULL;
         const char *current_name = user->conversation[i]->nom;
+        gboolean found = FALSE;
 
-        button = g_hash_table_lookup(conversation_buttons, current_name);
-        if (button == NULL)
+        // Iterate through rows to find if button exists
+        for (iter = rows; iter != NULL; iter = g_list_next(iter))
+        {
+            GtkListBoxRow *row = GTK_LIST_BOX_ROW(iter->data);
+            GtkWidget *child_button = gtk_bin_get_child(GTK_BIN(row)); // Get the child button of the row
+            const char *button_label = gtk_button_get_label(GTK_BUTTON(child_button));
+
+            if (strcmp(button_label, current_name) == 0)
+            {
+                found = TRUE;
+                break; // Button already exists
+            }
+        }
+
+        // If button not found, create new one and add to list box
+        if (!found)
         {
             button = gtk_button_new_with_label(current_name);
             gtk_list_box_insert(GTK_LIST_BOX(listbox), button, -1);
             g_signal_connect(button, "clicked", G_CALLBACK(on_contact_clicked), NULL);
-            g_hash_table_insert(conversation_buttons, g_strdup(current_name), button);
-            apply_css(listbox, GTK_STYLE_PROVIDER(provider));
         }
+        apply_css(listbox, GTK_STYLE_PROVIDER(provider));
     }
 
     // Show all widgets in the window
