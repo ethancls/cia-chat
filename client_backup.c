@@ -257,6 +257,7 @@ void maj()
         int incr = 0;
         for (int i = 0; i < MAX_CONVERSATIONS_PER_USER * 2; i = i + 2)
         {
+            printf("i: %d\n", i);
             if (content[i] == NULL)
             {
                 user->nb_conv = incr;
@@ -267,6 +268,7 @@ void maj()
             strcpy(user->conversation[incr]->nom, content[i + 1]);
             incr++;
         }
+        user->nb_conv = incr;
         printf("*******MAJ FINISHED*******\n");
         free(content);
     }
