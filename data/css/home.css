@@ -39,7 +39,8 @@
 #logout_button,
 #file_button,
 #new_button,
-#contact_button {
+#contact_button,
+#addParticipant {
     border-color: #000000;
     background-image: none;
     color: #ffffff;
@@ -50,7 +51,8 @@
 #send_button:hover,
 #logout_button:hover,
 #file_button:hover,
-#new_button:hover {
+#new_button:hover,
+#addParticipant:hover {
     background-color: #242b42;
 }
 
