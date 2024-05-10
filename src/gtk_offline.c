@@ -1,5 +1,7 @@
 #include "./client.h"
 
+// gcc -Wall `pkg-config --cflags gtk+-3.0` gtk_offline.c -o cia-chat `pkg-config --libs gtk+-3.0` -lssl -lcrypto
+
 void apply_css(GtkWidget *widget, GtkStyleProvider *provider)
 {
     gtk_style_context_add_provider(gtk_widget_get_style_context(widget),

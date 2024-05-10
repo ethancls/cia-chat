@@ -1,3 +1,5 @@
+/* Timothée M'BASSIDJE && Ethan NICOLAS -- 2024*/
+
 #include "./tcp_clt.h"
 
 void usage(char *nom_prog)

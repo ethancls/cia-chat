@@ -1,7 +1,9 @@
+/* Timothée M'BASSIDJE && Ethan NICOLAS -- 2024*/
+
 #include "./gtk_ui.h"
 #include "./tcp_clt.h"
 
-/* Variables globales */
+/* Global Variables */
 int sock;
 user_t *user;
 

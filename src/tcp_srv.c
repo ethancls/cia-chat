@@ -1,6 +1,8 @@
+/* Timothée M'BASSIDJE && Ethan NICOLAS -- 2024*/
+
 #include "./tcp_srv.h"
 
-/* Variables globales */
+/* Global Variables */
 sem_t sem;
 
 /************************************************************** Main ******************************************************************************/

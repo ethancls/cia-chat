@@ -1,3 +1,5 @@
+# Timothée M'BASSIDJE && Ethan NICOLAS -- 2024
+
 UNAME_S := $(shell uname -s)
 
 CC := gcc
@@ -17,8 +19,8 @@ ifeq ($(UNAME_S),Darwin)
     REQUIRED_PKGS := gtk+3 openssl@3 pkg-config
 endif
 
-TARGET := cia-chat
-TARGET_SRV := tcp_srv
+TARGET := ../cia-chat
+TARGET_SRV := ../tcp_srv
 SRCS := tcp_clt.c gtk_ui.c
 SRCS_SRV := tcp_srv.c
 
