@@ -734,7 +734,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						char *filePath = malloc(sizeof(char) * 256);
 						snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, conv);
 						printf("path : %s\n", filePath);
-						// sem_wait
+						sem_wait(&sem);
 						int sz = atoi(size) + 1;
 						char *message = malloc(sizeof(char) * sz);
 						read(socket, message, sz);
@@ -749,7 +749,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						printf("message written\n");
 						write(fdconv, formated, (int)strlen(formated));
 						close(fdconv);
-						// sem_post
+						sem_post(&sem);
 						break;
 					}
 				}
