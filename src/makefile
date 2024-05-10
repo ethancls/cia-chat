@@ -20,17 +20,22 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 TARGET := ../cia-chat
+OFFLINE_TARGET := ../offline
 TARGET_SRV := ../tcp_srv
 SRCS := tcp_clt.c gtk_ui.c
 SRCS_SRV := tcp_srv.c
+SRCS_OFFLINE := gtk_offline.c
 
-all: check-libs clean $(TARGET) $(TARGET_SRV)
+all: check-libs clean $(TARGET) $(TARGET_SRV) $(OFFLINE_TARGET)
 
 $(TARGET):
 	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $(TARGET)
 
 $(TARGET_SRV):
 	$(CC) $(CFLAGS) $(SRCS_SRV) $(LDFLAGS) -o $(TARGET_SRV)
+
+$(OFFLINE_TARGET):
+	$(CC) $(CFLAGS) $(SRCS_OFFLINE) $(LDFLAGS) -o $(OFFLINE_TARGET)
 
 # Check if necessary libraries are installed and install them if they are not
 check-libs:
@@ -41,7 +46,7 @@ check-libs:
 
 # Clean up
 clean:
-	rm -f $(TARGET) $(TARGET_SRV)
+	rm -f $(TARGET) $(TARGET_SRV) $(OFFLINE_TARGET)
 
 # Phony targets
 .PHONY: all clean check-libs
