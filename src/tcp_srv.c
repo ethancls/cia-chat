@@ -744,10 +744,9 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						if (fdconv == -1)
 						{
 							perror("open");
-							printf("PANIC A");
 							exit(1);
 						}
-						printf("messaje written\n");
+						printf("message written\n");
 						write(fdconv, formated, (int)strlen(formated));
 						close(fdconv);
 						// sem_post
