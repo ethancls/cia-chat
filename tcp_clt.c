@@ -1,132 +1,8 @@
-#include "./tcp_network.h"
+#include "./tcp_clt.h"
 
 void usage(char *nom_prog)
 {
 	printf("Usage: %s <IPv4 address>\n", nom_prog);
-}
-
-int main_wcp(int argc, char *argv[])
-{
-	if (argc != 2)
-	{
-		usage(argv[0]);
-		return 1;
-	}
-
-	uint16_t snd = 0;
-
-	// Create and connect socket
-	int sock = creer_connecter_sock(argv[1], PORT_WCP);
-	if (sock == -1)
-	{
-		perror("Failed to connect to server");
-		return 1;
-	}
-
-	// Get the IP address of the connected server
-	struct sockaddr_in addr;
-	socklen_t addrlen = sizeof(addr);
-	if (getpeername(sock, (struct sockaddr *)&addr, &addrlen) == -1)
-	{
-		perror("getpeername failed");
-		close(sock);
-		return 1;
-	}
-
-	// Convert binary IP address to human-readable format
-	char ip_str[INET_ADDRSTRLEN];
-	if (inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN) == NULL)
-	{
-		perror("inet_ntop failed");
-		close(sock);
-		return 1;
-	}
-	int reponse = 0;
-	user_t * user = malloc(sizeof(user_t));
-	user->conversation = malloc(sizeof(convo_t*) *CONTENT_MAX_NB);
-	for(int i =0; i < CONTENT_MAX_NB; i++){
-		user->conversation[i] = malloc(sizeof(convo_t));
-		user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
-		user->conversation[i]->nom = malloc(32);
-	}
-	query_t * q = malloc(sizeof(query_t));
-	char ** dataBuffer = malloc(sizeof(char*) * CONTENT_MAX_NB * 2);
-	//for(int i =0; i < CONTENT_MAX_NB; i++){
-	//	dataBuffer[i] = malloc(CONTENT_MAX_SIZE);
-	//}
-	printf("Connected to server IP: %s\n", ip_str);
-	printf("  ________  ___  ________  ________  ___  ___  ________  _________   \n");
-    printf(" |\\   ____\\|\\  \\|\\   __  \\|\\   ____\\|\\  \\|\\  \\|\\   __  \\|\\___   ___\\ \n");
-    printf(" \\ \\  \\___|\\ \\  \\ \\  \\|\\  \\ \\  \\___|\\ \\  \\\\\\  \\ \\  \\|\\  \\|___ \\  \\_| \n");
-    printf("  \\ \\  \\    \\ \\  \\ \\   __  \\ \\  \\    \\ \\   __  \\ \\   __  \\   \\ \\  \\  \n");
-    printf("   \\ \\  \\____\\ \\  \\ \\  \\ \\  \\ \\  \\____\\ \\  \\ \\  \\ \\  \\ \\  \\   \\ \\  \\ \n");
-    printf("    \\ \\_______\\ \\__\\ \\__\\ \\__\\ \\_______\\ \\__\\ \\__\\ \\__\\ \\__\\   \\ \\__\\\n");
-    printf("     \\|_______|\\|__|\\|__|\\|__|\\|_______|\\|__|\\|__|\\|__|\\|__|    \\|__|\n");
-    
-	printf("\nSe connecter : 1\nCreer un compte : 2\n");
-	int sc = 0;
-	scanf("%d",&sc);
-	char * nom = malloc(32);
-	char * mdp = malloc(32);
-	if(sc == 2){
-		printf("********************NOUVELLE UTILISATEUR****************************\n");
-		printf("taper nom utilisateur et mdp :\n");
-		printf("nom : ");
-	
-		scanf("%s",nom); 
-		printf("\n");
-		printf("mdp : ");
-		scanf("%s",mdp);
-		*q = construire_message(SIGNIN,nom,mdp);
-		envoyer_query(sock,q);
-		reponse = interpreter_message(sock,dataBuffer);
-		if(reponse == -1){
-			printf("n'a pas pu creer l'utilisateur\n");
-		}
-	}
-	printf("taper nom utilisateur et mdp :\n");
-	printf("nom : ");
-	
-	scanf("%s",nom); 
-	printf("\n");
-	printf("mdp : ");
-	scanf("%s",mdp);
-	printf("\n");
-	user->u_pseudo = nom;
-	user->password = mdp;
-	printf("user : %s , mdp : %s\n",user->u_pseudo,user->password);
-
-	*q = construire_message(LOG,user->u_pseudo,user->password); 
-	envoyer_query(sock,q);
-	reponse = interpreter_message(sock,dataBuffer);
-	if(reponse == -1){
-		printf("mauvais nom utilisateur\n");
-		close(sock);
-		exit(0);
-	}
-	printf("*************************LOADING DATA***************************************\n");
-	int incr = 0;
-	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
-		if(dataBuffer[i] == NULL){
-			user->nb_conv = incr;
-			break;
-		}
-		printf("data %d: %s \n",i,dataBuffer[i]);
-		//user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
-        strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
-		//printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
-		strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
-		incr++;
-	}
-
-
-	printf("convo loaded");
-
-	menu(user,sock,dataBuffer);
-	
-	close(sock);
-	printf("Program terminated without complications\n");
-	return 0;
 }
 
 int read_until_nl(int fd, char *buf)
@@ -159,160 +35,6 @@ int read_until_nl(int fd, char *buf)
 	*buf = '\0';
 	free(readChar); // on libere notre malloc
 	return numChar;
-}
-
-void envoyerMessage(user_t * u,int sock,char ** content){
-	int choix = 0;
-	printf("\n choissez une conversation : \n");
-	for(int i = 0; i < u->nb_conv;i++){
-		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
-	}
-	printf("choix : ");
-	scanf("%d", &choix);
-	if(choix >= u->nb_conv || choix <0){
-		printf("\n inavlide conv number : returning to menu\n");
-		return;
-	}
-	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
-	printf("\nmessage : ");
-	fflush(stdout);
-	char * message = malloc(1024);
-	char * sizem = malloc(5);
-	char * payload = malloc(1032);
-	read_until_nl(STDIN_FILENO,message);
-	printf("you typed : %s\n",message);
-	sprintf(sizem,"%d",(int)strlen(message));
-	snprintf(payload,1032,"%s:%s:",u->conversation[choix]->id_deconv,sizem);
-	//printf("payload : %s\n",payload);
-	free(sizem);
-	query_t q;
-	q = construire_message(SEND,u->u_pseudo,payload);
-	
-	envoyer_query(sock,&q);
-	write(sock,message,(int)strlen(message));
-	
-	free(message);
-	free(payload);
-
-	int rep = interpreter_message(sock,content);
-	if(rep == -1){
-		printf("Serveur had a problem : message ignored \n");
-		return;
-	}
-	printf("Serveur : ACK, message saved on serveur : %s\n",content[0]);
-	return;
-
-}
- 
-void voirConversation(user_t * u, int sock,char ** content){
-	int choix = 0;
-	printf("\n choissez une conversation : \n");
-	for(int i = 0; i < u->nb_conv;i++){
-		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
-	}
-	printf("choix : ");
-	scanf("%d", &choix);
-	if(choix >= u->nb_conv || choix <0){
-		printf("\n inavlide conv number : returning to menu\n");
-		return;
-	}
-	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
-	query_t q;
-	q = construire_message(UPDATE,u->u_pseudo,u->conversation[choix]->id_deconv);
-	envoyer_query(sock,&q);
-	int rep = interpreter_message(sock,content);
-	if(rep == -1){
-		printf("failed to get reponse : maybe convo doesnt exist? \n");
-		return;
-	}
-	printf("contenue conv :\n*****************************************************************************\n\n%s\n***********************************************************\n",content[0]);
-	printf("press any key to get back to menu");
-	char dis;
-	scanf("%c",&dis);
-	return;
-}
-
-void creerConversation(user_t * u, int sock,char ** content){
-	printf("nom nouvelle convo : ");
-	char nom[32];
-	scanf("%31s",nom);
-	printf("participant ( format nomPar1:nomPar2:...:nomParn:)  : ");
-	char participant[1026];
-	scanf("%1000s",participant);
-	char payload[1056];
-	snprintf(payload,1056,"%s%s:",participant,u->u_pseudo);
-	query_t q;
-	q = construire_message(CREATE,nom,payload);
-	envoyer_query(sock,&q);
-	int rep = interpreter_message(sock,content);
-	if(rep == -1){
-		printf("failed to create : %s\n",content[0]);
-		return;
-	}
-	printf("success created conversation :   %s", content[0]);
-
-}
- 
-void miseAJourServeur(user_t * user, int sock,char ** content){
-	query_t q;
-	q = construire_message(LOG,user->u_pseudo,user->password); 
-	envoyer_query(sock,&q);
-	int reponse = interpreter_message(sock,content);
-	
-	if(reponse == -1){
-		printf("failed to update : mauvais nom utilisateur");
-		return;
-	}
-	int incr = 0;
-	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
-		if(content[i] == NULL){
-			user->nb_conv = incr;
-			break;
-		}
-		printf("data %d: %s \n",i,content[i]);
-		strcpy(user->conversation[incr]->id_deconv, content[i]);
-		strcpy(user->conversation[incr]->nom, content[i + 1]);
-		incr++;
-	}
-	printf("convo loaded\n");
-	printf("\n***********************STATE UPDATED***********************************\n");
-	return;
-}
-
-void menu(user_t * u,int sock,char ** content) {
-    int choix;
-
-    do {
-		
-        printf("\nMenu :\n");
-        printf("1. Envoyer un message\n");
-        printf("2. Voir la conversation\n");
-        printf("3. Créer une conversation\n");
-        printf("4. Mettre à jour les conversation\n");
-        printf("0. Quitter\n");
-        printf("Choisissez une option : ");
-        scanf("%d", &choix);
-
-        switch (choix) {
-            case 1:
-                envoyerMessage(u,sock,content);
-                break;
-            case 2:
-                voirConversation(u,sock,content);
-                break;
-            case 3:
-                creerConversation(u,sock,content);
-                break;
-            case 4:
-                miseAJourServeur(u,sock,content);
-                break;
-            case 0:
-                printf("Au revoir !\n");
-                break;
-            default:
-                printf("Option invalide. Veuillez réessayer.\n");
-        }
-    } while (choix != 0);
 }
 
 tokens_t convert_to_request(const char *str)
@@ -556,3 +278,284 @@ query_t construire_message(tokens_t inst, char *username, char *content)
 
 	return query;
 }
+
+/* For a terminal interface use
+int main_tcp(int argc, char *argv[])
+{
+	if (argc != 2)
+	{
+		usage(argv[0]);
+		return 1;
+	}
+
+	uint16_t snd = 0;
+
+	// Create and connect socket
+	int sock = creer_connecter_sock(argv[1], PORT_WCP);
+	if (sock == -1)
+	{
+		perror("Failed to connect to server");
+		return 1;
+	}
+
+	// Get the IP address of the connected server
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
+	if (getpeername(sock, (struct sockaddr *)&addr, &addrlen) == -1)
+	{
+		perror("getpeername failed");
+		close(sock);
+		return 1;
+	}
+
+	// Convert binary IP address to human-readable format
+	char ip_str[INET_ADDRSTRLEN];
+	if (inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN) == NULL)
+	{
+		perror("inet_ntop failed");
+		close(sock);
+		return 1;
+	}
+	int reponse = 0;
+	user_t * user = malloc(sizeof(user_t));
+	user->conversation = malloc(sizeof(convo_t*) *CONTENT_MAX_NB);
+	for(int i =0; i < CONTENT_MAX_NB; i++){
+		user->conversation[i] = malloc(sizeof(convo_t));
+		user->conversation[i]->id_deconv = malloc(CONTENT_MAX_SIZE);
+		user->conversation[i]->nom = malloc(32);
+	}
+	query_t * q = malloc(sizeof(query_t));
+	char ** dataBuffer = malloc(sizeof(char*) * CONTENT_MAX_NB * 2);
+	//for(int i =0; i < CONTENT_MAX_NB; i++){
+	//	dataBuffer[i] = malloc(CONTENT_MAX_SIZE);
+	//}
+	printf("Connected to server IP: %s\n", ip_str);
+	printf("  ________  ___  ________  ________  ___  ___  ________  _________   \n");
+    printf(" |\\   ____\\|\\  \\|\\   __  \\|\\   ____\\|\\  \\|\\  \\|\\   __  \\|\\___   ___\\ \n");
+    printf(" \\ \\  \\___|\\ \\  \\ \\  \\|\\  \\ \\  \\___|\\ \\  \\\\\\  \\ \\  \\|\\  \\|___ \\  \\_| \n");
+    printf("  \\ \\  \\    \\ \\  \\ \\   __  \\ \\  \\    \\ \\   __  \\ \\   __  \\   \\ \\  \\  \n");
+    printf("   \\ \\  \\____\\ \\  \\ \\  \\ \\  \\ \\  \\____\\ \\  \\ \\  \\ \\  \\ \\  \\   \\ \\  \\ \n");
+    printf("    \\ \\_______\\ \\__\\ \\__\\ \\__\\ \\_______\\ \\__\\ \\__\\ \\__\\ \\__\\   \\ \\__\\\n");
+    printf("     \\|_______|\\|__|\\|__|\\|__|\\|_______|\\|__|\\|__|\\|__|\\|__|    \\|__|\n");
+    
+	printf("\nSe connecter : 1\nCreer un compte : 2\n");
+	int sc = 0;
+	scanf("%d",&sc);
+	char * nom = malloc(32);
+	char * mdp = malloc(32);
+	if(sc == 2){
+		printf("********************NOUVELLE UTILISATEUR****************************\n");
+		printf("taper nom utilisateur et mdp :\n");
+		printf("nom : ");
+	
+		scanf("%s",nom); 
+		printf("\n");
+		printf("mdp : ");
+		scanf("%s",mdp);
+		*q = construire_message(SIGNIN,nom,mdp);
+		envoyer_query(sock,q);
+		reponse = interpreter_message(sock,dataBuffer);
+		if(reponse == -1){
+			printf("n'a pas pu creer l'utilisateur\n");
+		}
+	}
+	printf("taper nom utilisateur et mdp :\n");
+	printf("nom : ");
+	
+	scanf("%s",nom); 
+	printf("\n");
+	printf("mdp : ");
+	scanf("%s",mdp);
+	printf("\n");
+	user->u_pseudo = nom;
+	user->password = mdp;
+	printf("user : %s , mdp : %s\n",user->u_pseudo,user->password);
+
+	*q = construire_message(LOG,user->u_pseudo,user->password); 
+	envoyer_query(sock,q);
+	reponse = interpreter_message(sock,dataBuffer);
+	if(reponse == -1){
+		printf("mauvais nom utilisateur\n");
+		close(sock);
+		exit(0);
+	}
+	printf("*************************LOADING DATA***************************************\n");
+	int incr = 0;
+	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
+		if(dataBuffer[i] == NULL){
+			user->nb_conv = incr;
+			break;
+		}
+		printf("data %d: %s \n",i,dataBuffer[i]);
+		//user->conversation[i]->id_deconv = malloc(strlen(dataBuffer[i]) + 1); // Allocation pour id_deconv
+        strcpy(user->conversation[incr]->id_deconv, dataBuffer[i]);
+		//printf("data loades in conversation %d: %s \n",i,user->conversation[incr]->id_deconv);
+		strcpy(user->conversation[incr]->nom, dataBuffer[i + 1]);
+		incr++;
+	}
+
+
+	printf("convo loaded");
+
+	menu(user,sock,dataBuffer);
+	
+	close(sock);
+	printf("Program terminated without complications\n");
+	return 0;
+}
+
+
+void envoyerMessage(user_t * u,int sock,char ** content){
+	int choix = 0;
+	printf("\n choissez une conversation : \n");
+	for(int i = 0; i < u->nb_conv;i++){
+		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
+	}
+	printf("choix : ");
+	scanf("%d", &choix);
+	if(choix >= u->nb_conv || choix <0){
+		printf("\n inavlide conv number : returning to menu\n");
+		return;
+	}
+	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
+	printf("\nmessage : ");
+	fflush(stdout);
+	char * message = malloc(1024);
+	char * sizem = malloc(5);
+	char * payload = malloc(1032);
+	read_until_nl(STDIN_FILENO,message);
+	printf("you typed : %s\n",message);
+	sprintf(sizem,"%d",(int)strlen(message));
+	snprintf(payload,1032,"%s:%s:",u->conversation[choix]->id_deconv,sizem);
+	//printf("payload : %s\n",payload);
+	free(sizem);
+	query_t q;
+	q = construire_message(SEND,u->u_pseudo,payload);
+	
+	envoyer_query(sock,&q);
+	write(sock,message,(int)strlen(message));
+	
+	free(message);
+	free(payload);
+
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("Serveur had a problem : message ignored \n");
+		return;
+	}
+	printf("Serveur : ACK, message saved on serveur : %s\n",content[0]);
+	return;
+
+}
+ 
+void voirConversation(user_t * u, int sock,char ** content){
+	int choix = 0;
+	printf("\n choissez une conversation : \n");
+	for(int i = 0; i < u->nb_conv;i++){
+		printf("conv number : %d ,name : %s\n",i,u->conversation[i]->nom);
+	}
+	printf("choix : ");
+	scanf("%d", &choix);
+	if(choix >= u->nb_conv || choix <0){
+		printf("\n inavlide conv number : returning to menu\n");
+		return;
+	}
+	printf("conversation : %s : id %s\n",u->conversation[choix]->nom,u->conversation[choix]->id_deconv);
+	query_t q;
+	q = construire_message(UPDATE,u->u_pseudo,u->conversation[choix]->id_deconv);
+	envoyer_query(sock,&q);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("failed to get reponse : maybe convo doesnt exist? \n");
+		return;
+	}
+	printf("contenue conv :\n*****************************************************************************\n\n%s\n***********************************************************\n",content[0]);
+	printf("press any key to get back to menu");
+	char dis;
+	scanf("%c",&dis);
+	return;
+}
+
+void creerConversation(user_t * u, int sock,char ** content){
+	printf("nom nouvelle convo : ");
+	char nom[32];
+	scanf("%31s",nom);
+	printf("participant ( format nomPar1:nomPar2:...:nomParn:)  : ");
+	char participant[1026];
+	scanf("%1000s",participant);
+	char payload[1056];
+	snprintf(payload,1056,"%s%s:",participant,u->u_pseudo);
+	query_t q;
+	q = construire_message(CREATE,nom,payload);
+	envoyer_query(sock,&q);
+	int rep = interpreter_message(sock,content);
+	if(rep == -1){
+		printf("failed to create : %s\n",content[0]);
+		return;
+	}
+	printf("success created conversation :   %s", content[0]);
+
+}
+ 
+void miseAJourServeur(user_t * user, int sock,char ** content){
+	query_t q;
+	q = construire_message(LOG,user->u_pseudo,user->password); 
+	envoyer_query(sock,&q);
+	int reponse = interpreter_message(sock,content);
+	
+	if(reponse == -1){
+		printf("failed to update : mauvais nom utilisateur");
+		return;
+	}
+	int incr = 0;
+	for(int i = 0; i < CONTENT_MAX_NB; i = i + 2){
+		if(content[i] == NULL){
+			user->nb_conv = incr;
+			break;
+		}
+		printf("data %d: %s \n",i,content[i]);
+		strcpy(user->conversation[incr]->id_deconv, content[i]);
+		strcpy(user->conversation[incr]->nom, content[i + 1]);
+		incr++;
+	}
+	printf("convo loaded\n");
+	printf("\n***********************STATE UPDATED***********************************\n");
+	return;
+}
+
+void menu(user_t * u,int sock,char ** content) {
+    int choix;
+
+    do {
+		
+        printf("\nMenu :\n");
+        printf("1. Envoyer un message\n");
+        printf("2. Voir la conversation\n");
+        printf("3. Créer une conversation\n");
+        printf("4. Mettre à jour les conversation\n");
+        printf("0. Quitter\n");
+        printf("Choisissez une option : ");
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1:
+                envoyerMessage(u,sock,content);
+                break;
+            case 2:
+                voirConversation(u,sock,content);
+                break;
+            case 3:
+                creerConversation(u,sock,content);
+                break;
+            case 4:
+                miseAJourServeur(u,sock,content);
+                break;
+            case 0:
+                printf("Au revoir !\n");
+                break;
+            default:
+                printf("Option invalide. Veuillez réessayer.\n");
+        }
+    } while (choix != 0);
+}
+*/

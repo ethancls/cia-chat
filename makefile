@@ -18,9 +18,9 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 TARGET := cia-chat
-TARGET_SRV := wcp_srv
-SRCS := client_backup.c wcp_clt.c
-SRCS_SRV := backup.c
+TARGET_SRV := tcp_srv
+SRCS := tcp_clt.c gtk_ui.c
+SRCS_SRV := tcp_srv.c
 
 all: check-libs clean $(TARGET) $(TARGET_SRV)
 
