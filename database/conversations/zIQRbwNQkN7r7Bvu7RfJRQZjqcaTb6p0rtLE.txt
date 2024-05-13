@@ -1,7 +1,0 @@
-		#coucou:
-admin : salam
-admin : popo
-ethan : non txt
-admin : caca
-admin : popo
-ethan : pipi zizi

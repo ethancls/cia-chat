@@ -1,5 +1,0 @@
-cia:
-admin : coucou
-admin : cscsscc
-admin : qsqsqsqs
-admin : sdsdqdqdqd
