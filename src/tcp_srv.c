@@ -241,7 +241,7 @@ int validate_login(char *username, char *password)
 			return 1;
 		}
 	}
-
+	fclose(file);
 	return 0;
 }
 
@@ -280,6 +280,7 @@ void write_login_to_file(char *username, char *password)
 	{
 		printf("Error: Unable to create file\n");
 	}
+	fclose(file);
 }
 
 /* Generate a random character */
@@ -323,6 +324,7 @@ char *create_new_conversation_file(char *conv_name)
 	{
 		printf("Error creating conversation file: %s\n", filePath);
 	}
+	fclose(file);
 	return chat_id;
 }
 
