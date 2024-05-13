@@ -193,6 +193,7 @@ void usage(char *nom_prog)
 
 /************************************************************** Database ******************************************************************************/
 
+/* Encrypt or decrypt a text using the Vigenere cipher */
 void vigenere(char *text, char *key, int encrypt) {
     int key_len = strlen(key);
     int key_index = 0;

@@ -2,6 +2,4 @@ Firstname: admin
 Lastname: admin
 sdsdsd;gxmtJsYiu4nvBLKu7Co8VAZHBgA0Dn3RyfR1
 dzsdsd;cUGFpdW7ElbWPegXrRnRFRKOnaQtFcAfp19l
-bonjour;hEsrrc7dxnpF2sm5HLNzYcfOdjAh9HGok8PJ
-pourmoi;0wEqM4yjHH9uvcM86GPLapYMm1cCMqJLUnbH
-marche;HE75QRn1WBUF3WrWtyUfBH57GPsvpwh5anaZ
+
