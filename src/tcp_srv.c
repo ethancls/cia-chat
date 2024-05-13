@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 	int kill = 0;
 	printf("socket\n");
 	int sock = creer_configurer_sock_ecoute(PORT_WCP); // creation socket listen
-
+	dbd->nbUser = 0;
 	reload_database(dbd);
 	print_master(dbd);
 	while (1)
@@ -275,6 +275,7 @@ void write_login_to_file(char *username, char *password)
 		fprintf(file, "Firstname: %s\n", username);
 		fprintf(file, "Lastname: %s\n", username);
 		fclose(file);
+		return;
 	}
 	else
 	{
@@ -318,7 +319,6 @@ char *create_new_conversation_file(char *conv_name)
 		snprintf(filename, 64, "		#%s:\n", conv_name);
 		printf("filename : %s\n", filename);
 		fprintf(file, filename); // evite le chat vide
-		fclose(file);
 	}
 	else
 	{
