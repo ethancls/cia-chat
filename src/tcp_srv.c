@@ -193,6 +193,40 @@ void usage(char *nom_prog)
 
 /************************************************************** Database ******************************************************************************/
 
+void vigenere(char *text, char *key, int encrypt) {
+    int key_len = strlen(key);
+    int key_index = 0;
+    char offset;
+
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (isalpha(text[i])) {
+            // Determine the offset for the current key character
+            offset = isupper(key[key_index]) ? (key[key_index] - 'A') : (key[key_index] - 'a');
+
+            if (isupper(text[i])) {
+                if (encrypt) {
+                    // Encrypt uppercase letters
+                    text[i] = 'A' + (text[i] - 'A' + offset) % 26;
+                } else {
+                    // Decrypt uppercase letters
+                    text[i] = 'A' + (text[i] - 'A' - offset + 26) % 26;
+                }
+            } else {
+                if (encrypt) {
+                    // Encrypt lowercase letters
+                    text[i] = 'a' + (text[i] - 'a' + offset) % 26;
+                } else {
+                    // Decrypt lowercase letters
+                    text[i] = 'a' + (text[i] - 'a' - offset + 26) % 26;
+                }
+            }
+
+            // Move to the next key character and wrap around if necessary
+            key_index = (key_index + 1) % key_len;
+        }
+    }
+}
+
 /* Hash a password */
 void hash_password(char *password, char *hashed_password_hex)
 {

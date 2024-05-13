@@ -19,6 +19,8 @@
 #include <openssl/sha.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <ctype.h>
+#include <string.h>
 /* Internet */
 #include <arpa/inet.h> /* inet_pton */
 /* Threads - Signal */
