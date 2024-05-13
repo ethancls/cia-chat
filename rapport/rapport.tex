@@ -1,0 +1,92 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+
+% Ajustement des marges
+\geometry{
+  a4paper,
+  total={170mm,257mm},  % Largeur et hauteur totales de la zone de texte
+  left=20mm,            % Marge gauche
+  top=20mm              % Marge supérieure
+}
+
+\title{Rapport de Projet SE\\ Système de Messagerie en Réseau}
+\author{M'BASSIDJE Timothée et NICOLAS Ethan }
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Ce rapport présente le développement d'un système de messagerie réseau basé sur le protocole TCP/IP. Le projet est implémenté en langage C, utilisant les bibliothèques standards Unix pour la gestion des opérations système et réseau. Ce système comprend des composants serveur et client, offrant des fonctionnalités complètes pour l'envoi et la réception de messages entre les utilisateurs, ainsi qu'une interface GTK dédiée.
+
+\vspace{0.3cm} Les fichiers sources incluent des définitions pour les serveurs et les clients, ainsi que pour une interface utilisateur graphique qui facilite l'interaction avec le système. Le projet est structuré pour permettre une communication efficace et sécurisée, en mettant en œuvre des fonctions de connexion réseau, de gestion des utilisateurs et des sessions, et de traitement des données transmises.
+
+\subsection{Technologies Utilisées}
+Le projet utilise les technologies suivantes :
+\begin{itemize}
+    \item Langage C.
+    \item Bibliothèques C pour les opérations système et réseau TCP.
+    \item Makefile pour l'automatisation de la compilation.
+    \item GTK3 pour l'interface utilisateur
+\end{itemize}
+
+\section{Explications du Code}
+
+\subsection{Serveur TCP}
+
+\begin{lstlisting}[language=C]
+// Exemple de fonction principale du serveur
+int main(int argc, char *argv[]) {
+    int sock_ecoute = creer_configurer_sock_ecoute(PORT_WCP);
+    if (sock_ecoute < 0) {
+        perror("Erreur de creation de la socket d'ecoute");
+        exit(EXIT_FAILURE);
+    }
+    while (1) {
+        int fd_client = accepter_connexion(sock_ecoute);
+        if (fd_client < 0) continue;
+        pthread_t thread_id;
+        if (pthread_create(&thread_id, NULL, thread_worker, (void *)&fd_client) != 0) {
+            perror("Erreur de creation du thread");
+        }
+    }
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{Client TCP}
+
+\begin{lstlisting}[language=C]
+// Exemple de fonction pour envoyer des requetes au serveur
+void envoyer_query(int fd, query_t *q) {
+    if (write(fd, q, sizeof(*q)) < 0) {
+        perror("Erreur d'envoi de la requete");
+        exit(EXIT_FAILURE);
+    }
+}
+\end{lstlisting}
+
+\subsection{Interface Utilisateur GTK}
+
+\begin{lstlisting}[language=C]
+// Exemple de fonction pour initialiser l'interface utilisateur
+void init_ui() {
+    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "Messagerie TCP");
+    gtk_window_set_default_size(GTK_WINDOW(window), 350, 200);
+    gtk_widget_show_all(window);
+}
+\end{lstlisting}
+
+\section{Conclusion}
+
+Ce projet a démontré l'efficacité de l'utilisation de C et des sockets TCP/IP pour développer un système de messagerie réseau robuste. Malgré les défis liés à la gestion des communications réseau et des interfaces utilisateur en C, le système accompli permet une communication fluide et sécurisée entre les utilisateurs. Les perspectives futures pourraient inclure l'amélioration de l'interface utilisateur, l'ajout de chiffrement pour les messages, et une meilleure gestion des erreurs et des performances réseau.
+
+\end{document}
