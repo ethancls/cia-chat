@@ -375,7 +375,7 @@ void open_chat_window()
     snprintf(title, sizeof(title), "Welcome Agent %s !", user_name);
     gtk_window_set_title(GTK_WINDOW(chat_window), title);
 
-    gtk_window_set_default_size(GTK_WINDOW(chat_window), 1920 * 0.5, 1200 * 0.5);
+    gtk_window_set_default_size(GTK_WINDOW(chat_window), 1920 * 0.7, 1200 * 0.6);
     gtk_window_set_position(GTK_WINDOW(chat_window), GTK_WIN_POS_CENTER);
     g_signal_connect(chat_window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
@@ -752,7 +752,7 @@ void append_to_text_view(const gchar *text)
 void send_message(GtkWidget *widget, gpointer data)
 {
     char *message = g_strdup(gtk_entry_get_text(GTK_ENTRY(chat_entry)));
-    g_strstrip(message);
+    //g_strstrip(message);
     if (message[0] == '\0')
     {
         printf("Empty message\n");

@@ -843,6 +843,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		printf("@CREATE\n");
 		char *user = strtok(payload, ":");
 		char *conversation = create_new_conversation_file(username);
+		addParticipant(conversation, username, "admin");
 		if (addParticipant(conversation, username, user) == -1)
 		{
 			rep = serv_construire_message(DENIED, username, "failed_to_create_new_converstion_or_invalid_participant");
@@ -876,6 +877,7 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 		{
 			printf("Creating account\n");
 			write_login_to_file(username, payload);
+			addParticipant("convdefault", "Welcome", username);
 			rep = serv_construire_message(OK, username, "Account created successfully");
 			envoyer_query(socket, &rep);
 		}
