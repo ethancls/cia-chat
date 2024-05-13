@@ -1,5 +1,3 @@
 Firstname: admin
 Lastname: admin
-sdsdsd;gxmtJsYiu4nvBLKu7Co8VAZHBgA0Dn3RyfR1
-dzsdsd;cUGFpdW7ElbWPegXrRnRFRKOnaQtFcAfp19l
-
+ConvGlobal;convdefault

@@ -1,3 +1,0 @@
-Firstname: sexy
-Lastname: sexy
-Welcome;convdefault
