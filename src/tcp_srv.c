@@ -516,6 +516,7 @@ query_t serv_construire_message(tokens_t token, char *info, char *content)
 /* Send query by using fd of the socket */
 void envoyer_query(int fd, query_t *q)
 {
+	vigenere(q->content,VIGINERE_KEY,1);
 	write(fd, q->content, sizeof(char) * q->size);
 }
 
@@ -686,6 +687,8 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 	char *username = malloc(sizeof(char) * 128);
 	char *payload = malloc(sizeof(char) * 1024);
 	printf("content : %s\n", q->content);
+	vigenere(q->content,VIGINERE_KEY,0);
+	printf("content uncrypted: %s\n", q->content);
 	sscanf(q->content, "%s %s %s", TOK, username, payload);
 	printf("*********INTERPRETER***********\n");
 	printf("%s\n", TOK);
@@ -770,7 +773,6 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						char *filePath = malloc(sizeof(char) * 256);
 						snprintf(filePath, 256, "%s/%s.txt", PATH_CONV, conv);
 						printf("path : %s\n", filePath);
-						sem_wait(&sem);
 						int sz = atoi(size) + 1;
 						char *message = malloc(sizeof(char) * sz);
 						read(socket, message, sz);
@@ -785,7 +787,6 @@ int serv_interpreter(query_t *q, masterDb_t *master, int socket)
 						printf("message written\n");
 						write(fdconv, formated, (int)strlen(formated));
 						close(fdconv);
-						sem_post(&sem);
 						break;
 					}
 				}

@@ -36,6 +36,7 @@
 #define MAX_CONVERSATIONS_PER_USER 32
 #define MAX_USERS 128
 #define MAX_INFO_SIZE 38
+#define VIGINERE_KEY "BAYOFPIGS"
 
 /* FILEPATHS */
 const char *PATH_USER = "./database/users";

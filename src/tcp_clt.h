@@ -26,6 +26,7 @@
 #define CONTENT_MAX_SIZE 64
 #define MAX_CONVERSATIONS_PER_USER 32
 #define CONTENT_MAX_NB 32
+#define VIGINERE_KEY "BAYOFPIGS"
 
 /* Définition des structures de données */
 typedef struct query
@@ -89,3 +90,4 @@ void creerConversation(user_t *u, int sock, char **content);
 void miseAJourServeur(user_t *user, int sock, char **content);
 void menu(user_t *u, int sock, char **content);
 tokens_t convert_to_request(const char *str);
+void vigenere(char *text, char *key, int encrypt);
