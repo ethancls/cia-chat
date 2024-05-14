@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <ctype.h>
 /* bibliothèque standard unix */
 #include <unistd.h> /* close, read, write */
 #include <sys/types.h>
