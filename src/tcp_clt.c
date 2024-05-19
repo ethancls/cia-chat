@@ -181,7 +181,7 @@ int interpreter_message(int fd,char ** dataRet)
 	sscanf(content, "%s %s %s", TOK, info, payload);
 	tokens_t r = convert_to_request(TOK);
 	//printf("token = %d\n", r);
-
+	
 	switch (r)
 	{
 	case LOG_OK:

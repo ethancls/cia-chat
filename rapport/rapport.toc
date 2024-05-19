@@ -1,0 +1,33 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{3}{}%
+\contentsline {subsection}{\numberline {1.1}Technologies Utilisées}{3}{}%
+\contentsline {section}{\numberline {2}Architecture Détailée}{3}{}%
+\contentsline {subsection}{\numberline {2.1}Architecture du Système}{3}{}%
+\contentsline {subsection}{\numberline {2.2}Diagrammes de Flux de Données}{3}{}%
+\contentsline {subsection}{\numberline {2.3}Interaction des Composants}{3}{}%
+\contentsline {section}{\numberline {3}Modules et Composants}{3}{}%
+\contentsline {subsection}{\numberline {3.1}Module Serveur}{3}{}%
+\contentsline {subsubsection}{\numberline {3.1.1}Fonctionnalités Principales}{3}{}%
+\contentsline {subsection}{\numberline {3.2}Module Client}{3}{}%
+\contentsline {subsubsection}{\numberline {3.2.1}Fonctionnalités Principales}{4}{}%
+\contentsline {subsection}{\numberline {3.3}Interface Utilisateur Graphique}{4}{}%
+\contentsline {subsubsection}{\numberline {3.3.1}Composants Clés de la GUI}{4}{}%
+\contentsline {section}{\numberline {4}Détails de l'Implémentation}{4}{}%
+\contentsline {subsection}{\numberline {4.1}Exemple de Code Serveur}{4}{}%
+\contentsline {subsection}{\numberline {4.2}Exemple de Code Client}{4}{}%
+\contentsline {section}{\numberline {5}Tests et Validation}{5}{}%
+\contentsline {subsection}{\numberline {5.1}Méthodologies de Test}{5}{}%
+\contentsline {subsection}{\numberline {5.2}Cas de Test et Scénarios}{5}{}%
+\contentsline {subsection}{\numberline {5.3}Résultats et Analyse}{5}{}%
+\contentsline {section}{\numberline {6}Analyse de la Performance}{5}{}%
+\contentsline {subsection}{\numberline {6.1}Benchmarking}{5}{}%
+\contentsline {subsection}{\numberline {6.2}Métriques de Performance}{5}{}%
+\contentsline {subsection}{\numberline {6.3}Analyse et Observations}{5}{}%
+\contentsline {section}{\numberline {7}Défis et Solutions}{5}{}%
+\contentsline {subsection}{\numberline {7.1}Défis Rencontrés}{5}{}%
+\contentsline {subsection}{\numberline {7.2}Stratégies de Résolution de Problèmes}{6}{}%
+\contentsline {subsection}{\numberline {7.3}Leçons Apprises}{6}{}%
+\contentsline {section}{\numberline {8}Travail Futur et Améliorations}{6}{}%
+\contentsline {subsection}{\numberline {8.1}Améliorations Proposées}{6}{}%
+\contentsline {subsection}{\numberline {8.2}Objectifs à Long Terme}{6}{}%
+\contentsline {section}{\numberline {9}Conclusion}{6}{}%
